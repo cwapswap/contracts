@@ -1,0 +1,37 @@
+# This is a "index source" that specifies the dApp world as you see it.
+#
+# This index defines what interpreters, contract templates etc you want
+# to use, and what they should be called.
+#
+# You can include external sources for this information in the `includes`
+# section, and you include your own smart contract in the `contract_templates`
+# section.
+#
+
+# We currently use a reference to the in-house ecosystem definition file for devnet.
+includes:
+  - url: >-
+      https://gitlab.com/api/v4/projects/47807501/packages/generic/contract_indexes/bootstrap/data_hasher/0.0.1/index.yaml
+    blake3: 63df86533d47bbc857e2b9a34155eef700bc40ce1e4a57607184682b3fa2a752
+  - url: >-
+      https://gitlab.com/api/v4/projects/47807501/packages/generic/contract_indexes/0.0.9/in_house_ecosystem_index.yaml
+    blake3: e84b9bf978b694e3656c3639d4c84eedf21ee65e61fe95ebd2c06c11890d561c
+
+interpreters: {}
+
+contract_templates:
+  # Our contract module.  The contract module is an npm package created in the `dist/out`
+  # directory using the `yarn build` and `yarn pack` commands.
+  - file:///./packages/dex-app.cm/dist/out/my-contract-module.tgz
+
+contract_instances:
+# Our contract instance.
+  - template: dex-app.cm
+    parameters: file:///./packages/dex-app.cm/instances/eth/parameters.json
+    alias: eth
+  - template: dex-app.cm
+    parameters: file:///./packages/dex-app.cm/instances/usdt/parameters.json
+    alias: usdt
+  # - template: dex-app.cm
+  #   parameters: file:///./packages/dex-app.cm/instances/bnb/parameters.json
+  #   alias: bnb

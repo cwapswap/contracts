@@ -1,0 +1,106 @@
+name: On push
+on: [push]
+env:
+  DOCKER_HOST: tcp://docker-dind.gitlab-managed-apps:2375
+
+jobs:
+  build:
+    runs-on: docker-27
+    steps:
+      # Node package is required to run actions.
+      - name: Install dependencies
+        run: apk add --no-cache bash nodejs
+        # Change the shell because bash is used by default,
+        # but it's not installed yet on this step.
+        shell: sh
+
+      - name: Login to container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ gitea.server_url }}
+          # I failed to use a job token
+          # (probably related: https://github.com/go-gitea/gitea/issues/31531).
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Check out the source code
+        uses: actions/checkout@v4
+
+      - name: Set up environment variables
+        run: |
+          # Replace '/' with '-'.
+          echo REF_SAFE_NAME=${GITHUB_REF_NAME////-} >> $GITHUB_ENV;
+          echo DOMAIN=${GITHUB_SERVER_URL#*://} >> $GITHUB_ENV;
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          # Use already fetched sources.
+          context: .
+          push: true
+          tags: |
+            ${{ env.DOMAIN }}/${{ gitea.repository }}:${{ gitea.sha }}
+            ${{ env.DOMAIN }}/${{ gitea.repository }}:${{ env.REF_SAFE_NAME }}
+
+  deploy:
+    needs: build
+    if: |
+      contains('
+        refs/heads/develop
+        refs/heads/main
+        refs/heads/staging
+      ', gitea.ref)
+    runs-on: k8s-1.27
+    env:
+      KUBECONFIG_CONTENT: ${{ secrets.KUBECONFIG }}
+      REPO_NAME: ${{ gitea.event.repository.name }}
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      # Using unique hash to trigger image pull.
+      IMAGE_TAG: ${{ gitea.sha }}
+    steps:
+      - name: Write config
+        run: mkdir ~/.kube && echo "$KUBECONFIG_CONTENT" > ~/.kube/config
+
+      # Node package is required to run the checkout action.
+      - name: Install Node
+        run: apk add --no-cache nodejs
+
+      - name: Check out the source code
+        uses: actions/checkout@v4
+
+      - name: Set up environment variables
+        run: |
+          # Replace '/' with '-'.
+          echo REF_SAFE_NAME=${GITHUB_REF_NAME////-} >> $GITHUB_ENV;
+          echo DOMAIN=${GITHUB_SERVER_URL#*://} >> $GITHUB_ENV;
+
+      - name: Create namespace
+        # Ignore if it already exists.
+        run: kubectl create namespace "$REPO_NAME-$REF_SAFE_NAME" || true
+
+      - name: Create docker registry secret
+        # Ignore if secret is already present.
+        run: |
+          kubectl create secret docker-registry container-registry \
+            --namespace "$REPO_NAME-$REF_SAFE_NAME" \
+            --docker-server="$DOMAIN" \
+            --docker-username="$REGISTRY_USERNAME" \
+            --docker-password="$REGISTRY_PASSWORD" || true
+
+      - name: Deploy
+        working-directory: chart
+        run: |
+          if [[ $REF_SAFE_NAME == main ]] then
+            url="https://$REPO_NAME.coinhq.store";
+          else
+            url="https://$REPO_NAME-$REF_SAFE_NAME.coinhq.store";
+          fi;
+
+          helm upgrade \
+            --install \
+            --create-namespace --namespace "$REPO_NAME-$REF_SAFE_NAME" \
+            --values values.yaml \
+            --set image.tag="$IMAGE_TAG" \
+            --set service.url="$url" \
+            "$REF_SAFE_NAME" .;

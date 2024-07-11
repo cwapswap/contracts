@@ -1,0 +1,10 @@
+{
+    "l1_contract_address": "0xb5cA973eb41DDf1c574A369A35aF8c8De9852433",
+    "owner": {
+        "auth": "EcdsaContract",
+        "payload": "03951f89fe78e13f295d96eb7afa1e0da726df7d58f9c84f7144e5febc30efeec4"
+    },
+    "collateral_percentage_Int": 25,
+    "owner_min_fee_Hex": "0x2386F26FC10000",
+    "owner_percentage_fee_Int": 1
+}

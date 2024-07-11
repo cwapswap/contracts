@@ -1,0 +1,12 @@
+{
+    "name": "DevNet",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "devnet",
+    "workspaceFolder": "/workspace",
+    "remoteUser": "cweb-dev",
+    "onCreateCommand": "yes | yarn config set --home npmRegistryServer \"$YARN_REGISTRY\"",
+    "initializeCommand": {
+        "uidResolve": "id -u > .devcontainer/uid",
+        "gidResolve": "id -g > .devcontainer/gid"
+    }
+}

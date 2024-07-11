@@ -1,0 +1,2 @@
+calls:
+    - !include packages/dex-app.cm/deploy/.calls-package.yaml

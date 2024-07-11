@@ -1,0 +1,28 @@
+version: "3.1"
+name: coinweb-devnet
+services:
+  postgres:
+    # Using alpine as it smaller in size.
+    image: postgres:16.1-alpine
+    environment:
+      POSTGRES_DB: devnet
+      POSTGRES_PASSWORD: devnet
+      POSTGRES_USER: devnet
+  devnet:
+    links:
+      - postgres
+    build: .
+    volumes:
+      - ..:/workspace:cached
+    environment:
+      NODE_ENV: development
+      # ATTENTION: Take care of the endpoint port if working from outside of the devcontainer
+      API_ENDPOINT_DEVNET: http://localhost:5100/wallet
+      BACKEND_EXTERNAL_PORT: "5555"
+    ports:
+      # ATTENTION: change BACKEND_EXTERNAL_PORT above
+      # if you modify the exposed API port number.
+      - 5555:5100 # API
+      - 5001:5101 # DevTools
+      - 5002:5102 # Explorer
+      - 5003:5103 # LinkMint

@@ -1,0 +1,81 @@
+{
+  "env": {
+    "node": true,
+    "es6": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:import/recommended",
+    "plugin:@typescript-eslint/recommended",
+    "eslint-config-prettier"
+  ],
+  "plugins": ["@typescript-eslint", "prettier"],
+  "settings": {
+    "import/resolver": {
+      "node": {
+        "extensions": [".js", ".jsx", ".ts", ".d.ts", ".tsx"]
+      }
+    }
+  },
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "project": true,
+    "exclude": ["**/node_modules/**", "**/dist/**", "**/cweb_dist/**"]
+  },
+  "ignorePatterns": ["dist", "cweb_dist"],
+  "rules": {
+    "import/newline-after-import": "error",
+    "import/order": [
+      "error",
+      {
+        "groups": ["builtin", "external", "internal", "parent", "sibling", "index"],
+        "newlines-between": "always",
+        "alphabetize": { "order": "asc" }
+      }
+    ],
+    "import/prefer-default-export": "off",
+    "import/no-default-export": "off",
+
+    "@typescript-eslint/comma-dangle": ["error", "always-multiline"],
+    "@typescript-eslint/naming-convention": [
+      "warn",
+      {
+        "selector": "variable",
+        "types": ["boolean"],
+        "format": ["camelCase", "PascalCase", "UPPER_CASE"],
+        "prefix": ["is", "should", "has", "can", "did", "use"]
+      },
+      {
+        "selector": "variable",
+        "format": ["camelCase", "PascalCase", "UPPER_CASE"]
+      }
+    ],
+    "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/explicit-function-return-type": ["off", { "allowTypedFunctionExpressions": true }],
+
+    "padding-line-between-statements": [
+      "error",
+      { "blankLine": "always", "prev": "*", "next": "return" },
+      { "blankLine": "always", "prev": ["const", "let"], "next": "*" },
+      {
+        "blankLine": "any",
+        "prev": ["const", "let"],
+        "next": ["const", "let"]
+      },
+      {
+        "blankLine": "always",
+        "prev": ["const", "let"],
+        "next": ["block-like"]
+      },
+      {
+        "blankLine": "always",
+        "prev": ["multiline-const"],
+        "next": ["multiline-const"]
+      }
+    ],
+    "comma-dangle": "off",
+    "object-shorthand": "warn",
+    "no-console": "warn",
+    "prettier/prettier": "error"
+  }
+}

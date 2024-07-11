@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ESNEXT",
+    "module": "ESNEXT",
+    "moduleResolution": "Bundler",
+    "rootDir": ".",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "types": ["vitest/globals"]
+  },
+  "include": ["src/**/*.ts", "vitest.config.ts", "src/onchain/methods/order/handleExecutionRequest/utils"]
+}

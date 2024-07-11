@@ -1,0 +1,53 @@
+{
+  "name": "dex-tx",
+  "packageManager": "yarn@4.2.2",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "yarn build:cm && yarn build:non-cm && yarn create-index",
+    "build:cm": "yarn workspaces foreach -Ap --include 'packages/*.cm' run build",
+    "build:non-cm": "yarn workspaces foreach -Ap --include 'packages/*' --exclude 'packages/*.cm' run build",
+    "create-index": "cweb-tool create-index .cweb-config/dapp-ecosystem.yaml .dapp-ecosystem-lock.yaml -c ./.cweb-config/config.json",
+    "deploy-contracts": "yarn publish-actions",
+    "call-contracts": "yarn call-contracts:prepare && yarn call-contracts:invoke",
+    "call-contracts:prepare": "yarn workspaces foreach --all run prepare-for-package && yarn node ./.cweb-config/create-calls.mjs",
+    "call-contracts:invoke": "cweb-tool call .cweb-config/calls.yaml -c ./.cweb-config/config.json",
+    "execute-actions": "echo \"*** THIS MIGHT TAKE A LONG TIME ***\"; sleep 1; cweb-tool execute-actions ./.actions.yaml -c ./.cweb-config/config.json",
+    "filter-actions": "cweb-tool filter-actions ./.unfiltered-actions.yaml .actions.yaml -c ./.cweb-config/config.json",
+    "gather-actions": "cweb-tool gather-actions .dapp-ecosystem-lock.yaml .unfiltered-actions.yaml -c ./.cweb-config/config.json",
+    "publish-actions": "cweb-tool publish .cweb-config/dapp-ecosystem.yaml -c ./.cweb-config/config.json",
+    "clean": "yarn clean:me && yarn workspaces foreach -Ap run clean",
+    "clean:me": "rm -rf .dapp-ecosystem-lock.yaml .unfiltered-actions.yaml .actions.yaml",
+    "test": "yarn workspaces foreach -Ap run test",
+    "setup-ide:vscode": "yarn dlx @yarnpkg/sdks vscode",
+    "install:with-node-modules": "yarn config set nodeLinker node-modules && yarn install",
+    "preinstall": "./scripts/preinstall.env.sh && yarn prepare",
+    "dev": "yarn workspaces foreach -Apiv run dev",
+    "typecheck": "yarn workspaces foreach -Ap run typecheck",
+    "prepare": "husky || true"
+  },
+  "resolutions": {
+    "@coinweb/cweb-tool": "1.0.34",
+    "@coinweb/wallet-lib": "^0.1.112-esm"
+  },
+  "devDependencies": {
+    "@coinweb/cweb-tool": "^1.0.34",
+    "eslint": "^8.57.0",
+    "eslint-plugin-import": "^2.29.1",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.4",
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.2"
+  },
+  "dependencies": {
+    "axios": "^1.4.0",
+    "js-yaml": "^4.1.0",
+    "write-yaml-file": "^5.0.0"
+  },
+  "version": "0.0.0",
+  "description": "",
+  "author": "cwap",
+  "license": "MIT"
+}

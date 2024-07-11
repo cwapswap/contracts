@@ -1,0 +1,44 @@
+{
+  "name": "dex-app.cm",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "build": "yarn build:files && yarn pack:all",
+    "build:files": "yarn clean && tsc -p tsconfig.build.json && NODE_ENV=production ./scripts/build.sh",
+    "start": "node src/offchain/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "pack:all": "yarn pack:cweb && yarn pack:yarn",
+    "pack:cweb": "NODE_NO_WARNINGS=1 cweb-tool pack . dist/out ../../.cweb-config/cweb-pack.yaml -c ../../.cweb-config/config.json",
+    "pack:yarn": "cd dist/out && touch yarn.lock && yarn pack -o my-contract-module.tgz",
+    "prepare-for-package": "./scripts/make-call.sh",
+    "call-contract": "yarn call-contract:prepare && yarn call-contract:invoke",
+    "call-contract:prepare": "./scripts/make-single-call.sh",
+    "call-contract:invoke": "cweb-tool call deploy/calls.yaml -c ../../.cweb-config/config.json",
+    "clean": "rm -rf cweb_dist dist .calls.yaml",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsc -p tsconfig.dev.json --watch"
+  },
+  "dependencies": {
+    "@coinweb/contract-kit": "0.1.7",
+    "@coinweb/self-register": "0.1.1",
+    "@coinweb/wallet-lib": "^0.1.112-esm",
+    "@noble/hashes": "^1.4.0"
+  },
+  "main": "dist/out/cweb_dist/offchain/index.js",
+  "engines": {
+    "cweb_interpreter": "a344c6003922f9e44385f6e8234a7d2567d9a676b14330ad3b42cbd1948a92bf"
+  },
+  "devDependencies": {
+    "@types/lodash.isequal": "^4.5.8",
+    "@types/node": "^20.14.10",
+    "esbuild": "^0.20.2",
+    "js-yaml": "^4.1.0",
+    "lodash.isequal": "^4.5.0",
+    "replace": "^1.2.2",
+    "typescript": "^5.4.2",
+    "vitest": "^1.4.0",
+    "write-yaml-file": "^5.0.0"
+  }
+}
