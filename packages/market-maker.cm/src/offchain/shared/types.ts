@@ -16,13 +16,15 @@ export type MakerDepositClaimBody = {
 
 export type OrderStateClaimBody = {
   baseAmount: HexBigInt;
-  quoteAmount: HexBigInt;
+  l1Amount: HexBigInt;
   createdAt: number;
   expirationDate: number;
   activityStatus: ORDER_ACTIVITY_STATUS;
   collateral: HexBigInt;
+  covering: HexBigInt;
   owner: User;
   baseWallet: string;
+  txId: string;
 };
 
 export type CollateralClaimBody = {
@@ -40,6 +42,7 @@ export type RequestStateClaimBody = {
   collateral: HexBigInt;
   fallbackContractId: string;
   fallbackMethodName: string;
+  txId: string;
 };
 
 export type OrderId = string;
@@ -50,11 +53,4 @@ export type WithdrawArguments = [withdrawAmount: HexBigInt];
 export type CreateOrderArguments = [baseAmount: HexBigInt, l1Amount: HexBigInt, baseWallet: CwebWallet];
 export type ChangeOrderArguments = [baseAmount: HexBigInt, l1Amount: HexBigInt, baseWallet: CwebWallet];
 export type CancelOrderArguments = [id: OrderId];
-export type HandleExecutionRequestArguments = [
-  baseAmount: HexBigInt,
-  quoteWallet: string,
-  orderId: OrderId,
-  fallbackContractId: string,
-  fallbackMethodName: string,
-];
 export type ChangeContractOwnerArguments = [newOwner: User];

@@ -9,9 +9,15 @@ import {
   selfCallWrapper,
 } from '@coinweb/contract-kit';
 
-import { PositionStateClaimBody, HexBigInt, PositionFundsClaimBody } from '../../../../offchain/shared';
-import { L1EventClaimBody, TypedClaim } from '../../../types';
-import { parseL1EventData } from '../../../utils';
+import {
+  PositionStateClaimBody,
+  HexBigInt,
+  PositionFundsClaimBody,
+  CallType,
+  PUBLIC_METHODS,
+} from '../../../../offchain/shared';
+import { TypedClaim } from '../../../types';
+import { parseL1EventClaimBody, unwrapEventClaim } from '../../../utils';
 
 import { handleAccept } from './handleAccept';
 import { handleClosed } from './handleClosed';
@@ -27,14 +33,10 @@ export const handleBlockTriggered = selfCallWrapper((context: Context) => {
     throw new Error('Cweb was not provided');
   }
 
-  const issuer = constructContractIssuer(getContractId(tx));
+  const selfId = getContractId(tx);
+  const issuer = constructContractIssuer(selfId);
 
-  const [, positionId, nonce, positionState] = getMethodArguments(context) as [
-    unknown,
-    string,
-    HexBigInt,
-    PositionStateClaimBody,
-  ];
+  const [, positionId, nonce] = getMethodArguments(context) as [unknown, string, HexBigInt | null];
 
   const contractArgs = extractContractArgs(tx);
 
@@ -48,12 +50,22 @@ export const handleBlockTriggered = selfCallWrapper((context: Context) => {
     throw new Error('Position is insolvent now');
   }
 
-  const eventClaim = extractRead(contractArgs[0])?.[0]?.content as TypedClaim<L1EventClaimBody> | undefined;
+  const positionStateClaim = extractRead(contractArgs[2])?.[0]?.content as
+    | TypedClaim<PositionStateClaimBody>
+    | undefined;
+
+  const positionState = positionStateClaim?.body;
+
+  if (!positionState) {
+    throw new Error('Position does not exists');
+  }
+
+  const eventClaim = unwrapEventClaim(extractRead(contractArgs[0])?.[0]?.content);
 
   if (eventClaim) {
-    const { cwebAddress, paidAmount, recipient, callContractData } = parseL1EventData(eventClaim.body.data);
+    const eventData = parseL1EventClaimBody(eventClaim.body);
 
-    if (callContractData) {
+    if (eventData.callType === CallType.Transfer) {
       return handleTransfer(
         context,
         issuer,
@@ -64,10 +76,13 @@ export const handleBlockTriggered = selfCallWrapper((context: Context) => {
         positionFundsClaim,
         availableCweb,
         auth,
-        paidAmount,
-        cwebAddress,
-        recipient,
-        callContractData,
+        eventData.paidAmount,
+        eventData.recipient,
+        {
+          l2Contract: eventData.nextContractId,
+          l2MethodName: eventData.nextContractMethod,
+          l2Args: [eventData.quoteAmount, eventData.quoteRecipient, selfId, PUBLIC_METHODS.CREATE_POSITION],
+        },
       );
     }
 
@@ -81,19 +96,19 @@ export const handleBlockTriggered = selfCallWrapper((context: Context) => {
       positionFundsClaim,
       availableCweb,
       auth,
-      paidAmount,
-      cwebAddress,
-      recipient,
+      eventData.paidAmount,
+      eventData.baseRecipient,
+      eventData.recipient,
     );
   }
 
-  const expirationBlockClaim = extractRead(contractArgs[2])?.[0]?.content;
+  const expirationBlockClaim = extractRead(contractArgs[3])?.[0]?.content;
 
   if (expirationBlockClaim) {
     return handleExpiration(context, issuer, positionId, positionState, positionFundsClaim, availableCweb);
   }
 
-  const closedBlockClaim = extractRead(contractArgs[3])?.[0]?.content;
+  const closedBlockClaim = extractRead(contractArgs[4])?.[0]?.content;
 
   if (closedBlockClaim) {
     return handleClosed();

@@ -6,12 +6,16 @@ import {
   createOrderDateIndexKey,
   createOrderStateKey,
   createOrderCollateralKey,
-  createOrderOwnerIndexKey,
+  createOrderByOwnerIndexKey,
   OrderStateClaimBody,
   toHex,
   CollateralClaimBody,
   createClosedOrderIndexKey,
+  createBestActiveOrderIndexKey,
+  HexBigInt,
+  createPendingOrderByOwnerIndexKey,
 } from '../../../offchain/shared';
+import { createRateIndex } from '../dataConversions';
 
 export const createOrderStateClaim = ({ id, body }: { id: string; body: OrderStateClaimBody }): Claim =>
   constructClaim(createOrderStateKey(id), body, toHex(0));
@@ -36,22 +40,22 @@ export const createBestOrderIndexClaim = ({
   quoteAmount,
   id,
 }: {
-  baseAmount: bigint;
-  quoteAmount: bigint;
+  baseAmount: bigint | HexBigInt;
+  quoteAmount: bigint | HexBigInt;
   id: string;
-}): Claim =>
-  constructClaim(
-    createBestOrderIndexKey(
-      quoteAmount
-        ? baseAmount / quoteAmount
-        : BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'), //TODO: Come back to this later
-      id,
-    ),
-    {},
-    toHex(0),
-  );
+}): Claim => constructClaim(createBestOrderIndexKey(createRateIndex(baseAmount, quoteAmount), id), {}, toHex(0));
 
-export const createOrderOwnerIndexClaim = ({
+export const createBestActiveOrderIndexClaim = ({
+  baseAmount,
+  quoteAmount,
+  id,
+}: {
+  baseAmount: bigint | HexBigInt;
+  quoteAmount: bigint | HexBigInt;
+  id: string;
+}): Claim => constructClaim(createBestActiveOrderIndexKey(createRateIndex(baseAmount, quoteAmount), id), {}, toHex(0));
+
+export const createOrderByOwnerIndexClaim = ({
   user,
   timestamp,
   id,
@@ -59,7 +63,17 @@ export const createOrderOwnerIndexClaim = ({
   user: User;
   timestamp: number;
   id: string;
-}): Claim => constructClaim(createOrderOwnerIndexKey(user, timestamp, id), {}, toHex(0));
+}): Claim => constructClaim(createOrderByOwnerIndexKey(user, timestamp, id), {}, toHex(0));
+
+export const createPendingOrderByOwnerIndexClaim = ({
+  user,
+  timestamp,
+  id,
+}: {
+  user: User;
+  timestamp: number;
+  id: string;
+}): Claim => constructClaim(createPendingOrderByOwnerIndexKey(user, timestamp, id), {}, toHex(0));
 
 export const createClosedOrderIndexClaim = ({ id }: { id: string }): Claim =>
   constructClaim(createClosedOrderIndexKey(id), {}, toHex(0));

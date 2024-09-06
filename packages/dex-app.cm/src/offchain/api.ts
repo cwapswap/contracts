@@ -3,7 +3,8 @@ import type { PubKey } from '@coinweb/wallet-lib';
 
 import {
   createActivePositionIndexFirstPart,
-  createBestPositionIndexFirstPart,
+  createBestByQuoteActiveIndexFirstPart,
+  createBestByQuoteIndexFirstPart,
   createDateIndexFirstPart,
   createPositionStateKey,
   createUserIndexFirstPart,
@@ -18,7 +19,13 @@ export const getActivePositionIds = async (client: Client): Promise<string[]> =>
 };
 
 export const getBestPositionIds = async (client: Client): Promise<string[]> => {
-  const claimsResponse = await client.fetchClaims(createBestPositionIndexFirstPart(), null);
+  const claimsResponse = await client.fetchClaims(createBestByQuoteIndexFirstPart(), null);
+
+  return claimsResponse.map(({ content }) => ((content.key as ClaimKey).second_part as [number, string])[1]);
+};
+
+export const getBestActivePositionIds = async (client: Client): Promise<string[]> => {
+  const claimsResponse = await client.fetchClaims(createBestByQuoteActiveIndexFirstPart(), null);
 
   return claimsResponse.map(({ content }) => ((content.key as ClaimKey).second_part as [number, string])[1]);
 };
@@ -55,5 +62,7 @@ export const getPositionById = async (client: Client, id: string) => {
     activityStatus: data.activityStatus,
     paymentStatus: data.paymentStatus,
     funds: BigInt(data.funds),
+    chainData: data.chainData,
+    txId: data.txId,
   } satisfies PositionData;
 };

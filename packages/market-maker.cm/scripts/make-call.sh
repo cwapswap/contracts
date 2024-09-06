@@ -12,7 +12,7 @@ const fs = require('fs');
 
 const yamlFilePath = './deploy/calls.yaml.template';
 const yamlContent = fs.readFileSync(yamlFilePath, 'utf8');
-const modifiedYamlContent = yamlContent.replace(/__CWEB_CONTRACT_SELF_REFERENCE__/g, '6dd42c61b8f5115c8b93fb76f5bac362537f41f8c9188e2233304c604629f8d3');
+const modifiedYamlContent = yamlContent.replace(/__CWEB_CONTRACT_SELF_REFERENCE__/g, '3c246eff905d93d89484e692799926205d31c9618a5cae2377d5cd758d598242');
 
 console.log(modifiedYamlContent); // Output the modified YAML content
 EOF

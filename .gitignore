@@ -6,7 +6,7 @@ tmp
 **/dist
 **/.DS_Store
 **/.calls-package.yaml
-.dapp-ecosystem-lock.yaml
+.dapp-ecosystem-lock*.yaml
 .vscode/*
 
 .pnp.*
@@ -21,7 +21,7 @@ tmp
 
 unsafe_wallet_mnenonic
 unsafe_wallet_mnemonic
-.unfiltered-actions.yaml
+.unfiltered-actions*.yaml
 
 install-state.gz
 
@@ -34,3 +34,8 @@ install-state.gz
 !.env.yarn
 
 .cweb-config/calls.yaml
+tests_data/
+.cweb-config/config.yaml
+.actions.yaml
+.actions-prod.yaml
+.actions-devnet-blue.yaml

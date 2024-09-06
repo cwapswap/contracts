@@ -1,11 +1,15 @@
-import { constructContinueTx, constructRead, Context, selfCallWrapper } from '@coinweb/contract-kit';
+import { constructContinueTx, constructRead, Context } from '@coinweb/contract-kit';
 
 import { createContractOwnerKey, createMakerDepositKey } from '../../../offchain/shared';
 import { PRIVATE_METHODS } from '../../constants';
-import { getCallParameters, getContractIssuer, getContractRef, getUser } from '../../utils';
+import { getCallParameters, getContractIssuer, getContractRef, getMethodArguments, getUser } from '../../utils';
 
-export const seed = selfCallWrapper((context: Context) => {
+import { PrepareSeedPrivateArguments } from './types';
+
+export const seed = (context: Context) => {
   const { availableCweb, authInfo } = getCallParameters(context);
+
+  const parametersForPreparing = getMethodArguments<PrepareSeedPrivateArguments>(context);
 
   const issuer = getContractIssuer(context);
 
@@ -21,7 +25,7 @@ export const seed = selfCallWrapper((context: Context) => {
             ref: getContractRef(context),
             methodInfo: {
               methodName: PRIVATE_METHODS.PREPARE_SEED,
-              methodArgs: [],
+              methodArgs: parametersForPreparing satisfies PrepareSeedPrivateArguments,
             },
             contractInfo: {
               providedCweb: availableCweb - transactionFee,
@@ -36,4 +40,4 @@ export const seed = selfCallWrapper((context: Context) => {
       ],
     ),
   ];
-});
+};

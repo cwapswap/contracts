@@ -8,14 +8,11 @@
 # section.
 #
 
-# We currently use a reference to the in-house ecosystem definition file for devnet.
 includes:
   - url: >-
-      https://gitlab.com/api/v4/projects/47807501/packages/generic/contract_indexes/bootstrap/data_hasher/0.0.1/index.yaml
-    blake3: 63df86533d47bbc857e2b9a34155eef700bc40ce1e4a57607184682b3fa2a752
-  - url: >-
-      https://gitlab.com/api/v4/projects/47807501/packages/generic/contract_indexes/0.0.9/in_house_ecosystem_index.yaml
-    blake3: e84b9bf978b694e3656c3639d4c84eedf21ee65e61fe95ebd2c06c11890d561c
+      https://gitlab.com/coinweb/cweb-dapp-index/-/raw/e1b5ada59e5ca14a4d6e6c0d100ee0becb6ee34d/dapp_lock_index.yaml
+    blake3: 353a1a8ae4bd26c54c59ae9dbafec1d4332f60a6056f9bffa508598f3a8064b3
+
 
 interpreters: {}
 
@@ -23,15 +20,216 @@ contract_templates:
   # Our contract module.  The contract module is an npm package created in the `dist/out`
   # directory using the `yarn build` and `yarn pack` commands.
   - file:///./packages/dex-app.cm/dist/out/my-contract-module.tgz
+  - file:///./packages/market-maker.cm/dist/out/my-contract-module.tgz
 
 contract_instances:
-# Our contract instance.
-  - template: dex-app.cm
-    parameters: file:///./packages/dex-app.cm/instances/eth/parameters.json
-    alias: eth
-  - template: dex-app.cm
-    parameters: file:///./packages/dex-app.cm/instances/usdt/parameters.json
-    alias: usdt
-  # - template: dex-app.cm
-  #   parameters: file:///./packages/dex-app.cm/instances/bnb/parameters.json
-  #   alias: bnb
+  - alias: btc_offer_maker 0.0.6+stage
+    template: dex-app.cm v0.0.6
+    parameters:
+      content:
+        l1_type: 1
+        jump_contract_id: '14f1e7f9cc269dc918b69d40d48a76a0cd51e575ca9fe56dce293d7ef87393b5'
+        shard: tbtc
+        owner: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+        owner_min_fee: '0x2386F26FC10000'
+        owner_percentage_fee: 1
+  - alias: eth_offer_maker v0.0.6+stage
+    template: dex-app.cm v0.0.6
+    parameters:
+      content:
+        l1_type: 0
+        l1_contract_address: '0x47C37b9223e879D78B7a3c8D63C6b022fD0c2374'
+        # This is not used in v0.0.3, but will be used later
+        jump_contract_id: '14f1e7f9cc269dc918b69d40d48a76a0cd51e575ca9fe56dce293d7ef87393b5'
+        shard: deva
+        owner: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+        owner_min_fee: '0x2386F26FC10000'
+        owner_percentage_fee: 1
+
+#   - alias: eth_offer_maker v0.0.0+prod
+#     template: dex-app.cm v0.0.6
+#     parameters:
+#       content:
+#         # This exists on L1 
+#         # https://etherscan.io/address/0xb18D9349dEed2604b5b31155BAe19c7E43375632
+#         l1_contract_address: '0xb18D9349dEed2604b5b31155BAe19c7E43375632'
+#         shard: eth
+#         owner: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+#         owner_min_fee: '0x2386F26FC10000'
+#         owner_percentage_fee: 1
+
+  - alias: bnb_offer_maker v0.0.6+stage
+    template: dex-app.cm v0.0.6
+    parameters:
+      content:
+        l1_type: 0
+        l1_contract_address: '0x74A1C04c23F6619697c4672678Ca281987Bb7A13'
+        # This is not used in v0.0.3, but will be used later
+        jump_contract_id: '14f1e7f9cc269dc918b69d40d48a76a0cd51e575ca9fe56dce293d7ef87393b5'
+        shard: devb
+        owner: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+        owner_min_fee: '0x2386F26FC10000'
+        owner_percentage_fee: 1
+
+#   - alias: bnb_offer_maker v0.0.0+prod
+#     template: dex-app.cm v0.0.1+develop
+#     parameters:
+#       content:
+#         # This exists on L1
+#         # https://bscscan.com/address/0x688a12C3dd1b92F4739E40B4313Ad15540B2B377
+#         l1_contract_address: '0x688a12C3dd1b92F4739E40B4313Ad15540B2B377'
+#         shard: bnb
+#         owner: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+#         owner_min_fee: '0x2386F26FC10000'
+#         owner_percentage_fee: 1
+
+#  - alias: usdt_brc20_offer_maker v0.0.3+stage
+#    template: dex-app.cm v0.0.3
+#    parameters:
+#      content:
+#        # TODO: looks to be a prod address
+#        l1_contract_address: '0x7A0600259A1b66686254C0AF7B4215011d351288'
+#        shard: bnb
+#        owner: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+#        owner_min_fee: '0x2386F26FC10000'
+#        owner_percentage_fee: 1
+
+#   - alias: usdt_brc20_offer_maker v0.0.0+prod
+#     template: dex-app.cm v0.0.1+develop
+#     parameters:
+#       content:
+#         # This exists at L1
+#         # https://bscscan.com/address/0x7A0600259A1b66686254C0AF7B4215011d351288
+#         l1_contract_address: '0x7A0600259A1b66686254C0AF7B4215011d351288'
+#         shard: bnb
+#         owner: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+#         owner_min_fee: '0x2386F26FC10000'
+#         owner_percentage_fee: 1
+
+#  - alias: usdt_erc20_offer_maker v0.0.3+stage
+#    template: dex-app.cm v0.0.3
+#    parameters:
+#      content:
+#        # TODO: looks to be a prod address
+#        l1_contract_address: '0x688a12C3dd1b92F4739E40B4313Ad15540B2B377'
+#        shard: eth
+#        owner: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+#        owner_min_fee: '0x2386F26FC10000'
+#        owner_percentage_fee: 1
+
+
+  - alias: eth_dex_pact_maker v0.0.6+stage
+    template: market-maker.cm v0.0.6
+    parameters:
+      content:
+        l1_contract_address: '0x82F8A19dfe729d3f02032BBAF5B4bd9A1057B8D0'
+        # This is not used in v0.0.3, but will be used later
+        jump_contract_id: '14f1e7f9cc269dc918b69d40d48a76a0cd51e575ca9fe56dce293d7ef87393b5'
+        shard: deva
+        owner:
+          auth: EcdsaContract
+          payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+        collateral_percentage_Int: 100
+        owner_min_fee_Hex: '0x2386F26FC10000'
+        owner_percentage_fee_Int: 1
+
+
+#   - alias: eth_dex_pact_maker v0.0.0+prod
+#     template: market-maker.cm v0.0.1+develop
+#     parameters:
+#       content:
+#         # https://etherscan.io/address/0x4F336FBEAE4Ad9EacB3881639dE18110Ec308BbB
+#         l1_contract_address: '0x4F336FBEAE4Ad9EacB3881639dE18110Ec308BbB'
+#         shard: eth
+#         owner:
+#           auth: EcdsaContract
+#           payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+#         collateral_percentage_Int: 100
+#         owner_min_fee_Hex: '0x2386F26FC10000'
+#         owner_percentage_fee_Int: 1
+  
+  - alias: usdt_erc20_dex_pact_maker v0.0.6+stage
+    template: market-maker.cm v0.0.6
+    parameters:
+      content:
+        # TODO: looks to be a prod address
+        l1_contract_address: '0x61dfB1684c43e1F6D712d4A73bCd2d44C684F4Db'
+        shard: eth
+        owner:
+          auth: EcdsaContract
+          payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+        collateral_percentage_Int: 100
+        owner_min_fee_Hex: '0x2386F26FC10000'
+        owner_percentage_fee_Int: 1
+
+#   - alias: usdt_erc20_dex_pact_maker v0.0.0+prod
+#     template: market-maker.cm v0.0.1+develop
+#     parameters:
+#       content:
+#         # https://etherscan.io/address/0x61dfB1684c43e1F6D712d4A73bCd2d44C684F4Db
+#         l1_contract_address: '0x61dfB1684c43e1F6D712d4A73bCd2d44C684F4Db'
+#         shard: eth
+#         owner:
+#           auth: EcdsaContract
+#           payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+#         collateral_percentage_Int: 100
+#         owner_min_fee_Hex: '0x2386F26FC10000'
+#         owner_percentage_fee_Int: 1
+  
+  - alias: usdt_brc20_dex_pact_maker v0.0.6+stage
+    template: market-maker.cm v0.0.6
+    parameters:
+      content:
+        # TODO: looks to be a prod address
+        l1_contract_address: '0xb18D9349dEed2604b5b31155BAe19c7E43375632'
+        shard: bnb
+        owner:
+          auth: EcdsaContract
+          payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+        collateral_percentage_Int: 100
+        owner_min_fee_Hex: '0x2386F26FC10000'
+        owner_percentage_fee_Int: 1
+
+#   - alias: usdt_brc20_dex_pact_maker v0.0.0+prod
+#     template: market-maker.cm v0.0.1+develop
+#     parameters:
+#       content:
+#         # https://bscscan.com/address/0xb18D9349dEed2604b5b31155BAe19c7E43375632
+#         l1_contract_address: '0xb18D9349dEed2604b5b31155BAe19c7E43375632'
+#         shard: bnb
+#         owner:
+#           auth: EcdsaContract
+#           payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+#         collateral_percentage_Int: 100
+#         owner_min_fee_Hex: '0x2386F26FC10000'
+#         owner_percentage_fee_Int: 1
+
+  - alias: bnbm_dex_pact_maker v0.0.6+stage
+    template: market-maker.cm v0.0.6
+    parameters:
+      content:
+        l1_contract_address: '0x41bB69D046eDe33aa7329D99b0710bF5EAA8C520'
+        # This is not used in v0.0.3, but will be used later
+        jump_contract_id: '14f1e7f9cc269dc918b69d40d48a76a0cd51e575ca9fe56dce293d7ef87393b5'
+        shard: devb
+        owner:
+          auth: EcdsaContract
+          payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+        collateral_percentage_Int: 100
+        owner_min_fee_Hex: '0x2386F26FC10000'
+        owner_percentage_fee_Int: 1
+
+
+#   - alias: bnbm_dex_pact_maker v0.0.0+prod
+#     template: market-maker.cm v0.0.1+develop
+#     parameters:
+#       content:
+#         # https://bscscan.com/address/0x61dfB1684c43e1F6D712d4A73bCd2d44C684F4Db
+#         l1_contract_address: '0x61dfB1684c43e1F6D712d4A73bCd2d44C684F4Db'
+#         shard: bnb
+#         owner:
+#           auth: EcdsaContract
+#           payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+#         collateral_percentage_Int: 100
+#         owner_min_fee_Hex: '0x2386F26FC10000'
+#         owner_percentage_fee_Int: 1

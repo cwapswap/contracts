@@ -1,8 +1,22 @@
 import { Context } from '@coinweb/contract-kit';
 
-import { CreateOrderArguments, FEE, ORDER_ACTIVITY_STATUS, OrderStateClaimBody } from '../../../../offchain/shared';
+import {
+  CreateOrderArguments,
+  FEE,
+  ORDER_ACTIVITY_STATUS,
+  OrderStateClaimBody,
+  toHex,
+} from '../../../../offchain/shared';
 import { CONSTANTS } from '../../../constants';
-import { getCallParameters, getContractIssuer, getMethodArguments, getUser, hashObject } from '../../../utils';
+import {
+  getCallParameters,
+  getContractIssuer,
+  getInstanceParameters,
+  getMethodArguments,
+  getTime,
+  getUser,
+  hashObject,
+} from '../../../utils';
 
 import { constructPrivateOrderCall } from './utils';
 
@@ -11,21 +25,26 @@ export const createOrderPublic = (context: Context) => {
 
   const [baseAmount, l1Amount, baseWallet] = getMethodArguments<CreateOrderArguments>(context);
 
-  if (availableCweb < BigInt(baseAmount) + FEE.CREATE_ORDER) {
+  const collateralPercentage = getInstanceParameters().collateral_percentage_Int;
+  const collateral = (BigInt(baseAmount) * BigInt(collateralPercentage)) / 100n;
+
+  if (availableCweb < FEE.CREATE_ORDER) {
     throw new Error('Insufficient cweb provided'); //TODO! Return a rest of cweb;
   }
 
-  const createdAt = Date.now();
+  const createdAt = getTime();
 
   const initialState = {
     activityStatus: ORDER_ACTIVITY_STATUS.ACTIVE,
     baseAmount,
-    quoteAmount: l1Amount,
+    l1Amount,
     createdAt,
     expirationDate: createdAt + CONSTANTS.ORDER_LIFE_TIME,
-    collateral: l1Amount,
+    collateral: toHex(collateral),
+    covering: baseAmount,
     baseWallet,
     owner: getUser(context),
+    txId: context.call.txid,
   } satisfies OrderStateClaimBody;
 
   const orderId = hashObject(initialState);

@@ -1,0 +1,279 @@
+{{- if not .Values.application.initializeCommand -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "trackableappname" . }}
+  annotations:
+    {{- if .Values.gitlab.app }}
+    app.gitlab.com/app: {{ .Values.gitlab.app | quote }}
+    {{- end }}
+    {{- if .Values.gitlab.env }}
+    app.gitlab.com/env: {{ .Values.gitlab.env | quote }}
+    {{- end }}
+  labels:
+    track: "{{ .Values.application.track }}"
+    tier: "{{ .Values.application.tier }}"
+{{ include "sharedlabels" . | indent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ template "appname" . }}
+      track: "{{ .Values.application.track }}"
+      tier: "{{ .Values.application.tier }}"
+      release: {{ .Release.Name }}
+  replicas: {{ .Values.replicaCount }}
+{{- if .Values.strategyType }}
+  strategy:
+    type: {{ .Values.strategyType | quote }}
+{{- end }}
+  template:
+    metadata:
+      annotations:
+        checksum/application-secrets: "{{ .Values.application.secretChecksum }}"
+        {{- if .Values.gitlab.app }}
+        app.gitlab.com/app: {{ .Values.gitlab.app | quote }}
+        {{- end }}
+        {{- if .Values.gitlab.env }}
+        app.gitlab.com/env: {{ .Values.gitlab.env | quote }}
+        {{- end }}
+{{- if .Values.podAnnotations }}
+{{- toYaml .Values.podAnnotations | nindent 8 }}
+{{- end }}
+      labels:
+        track: "{{ .Values.application.track }}"
+        tier: "{{ .Values.application.tier }}"
+{{ include "sharedlabels" . | indent 8 }}
+    spec:
+{{- if or (.Values.serviceAccount.name) (.Values.serviceAccountName) }}
+      serviceAccountName: {{ .Values.serviceAccount.name | default .Values.serviceAccountName | quote }}
+{{- end }}
+      {{- with $.Values.image.secrets }}
+      imagePullSecrets:
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+{{- if .Values.nodeSelector }}
+      nodeSelector:
+{{- toYaml .Values.nodeSelector | nindent 8 }}
+{{- end }}
+{{- if .Values.securityContext }}
+      securityContext:
+{{- toYaml .Values.securityContext | nindent 8 }}
+{{- end }}
+{{- if .Values.hostNetwork }}
+      hostNetwork: {{ .Values.hostNetwork }}
+{{- end }}
+{{- if .Values.dnsPolicy }}
+      dnsPolicy: {{ .Values.dnsPolicy }}
+{{- end }}
+{{- if .Values.dnsConfig }}
+      dnsConfig:
+{{- toYaml .Values.dnsConfig | nindent 8 }}
+{{- end }}
+{{- if .Values.tolerations }}
+      tolerations:
+{{- toYaml .Values.tolerations | nindent 6 }}
+{{- end }}
+{{- if .Values.affinity }}
+      affinity:
+{{- toYaml .Values.affinity | nindent 8 }}
+{{- end }}
+{{- if .Values.initContainers }}
+      initContainers:
+{{- toYaml .Values.initContainers | nindent 6 }}
+{{- end }}
+{{- if .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+{{- toYaml .Values.topologySpreadConstraints | nindent 6 }}
+{{- end }}
+{{- if or (.Values.persistence.enabled) (.Values.extraVolumes) }}
+      volumes:
+{{- if .Values.persistence.enabled }}
+{{- $context := . }}
+{{- range $volume := .Values.persistence.volumes }}
+      - name: {{ $volume.name | quote }}
+        persistentVolumeClaim:
+          {{- $args := dict "context" $context "name" $volume.name }}
+          claimName: {{ template "pvcName" $args }}
+{{- end }}
+{{- end }}
+{{- if .Values.extraVolumes }}
+{{- toYaml .Values.extraVolumes | nindent 6 }}
+{{- end }}
+{{- end }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+{{- if .Values.hostAliases }}
+      hostAliases:
+{{- toYaml .Values.hostAliases | nindent 6 }}
+{{- end }}
+{{- if .Values.priorityClassName }}
+      priorityClassName: {{ .Values.priorityClassName }}
+{{- end }}
+      containers:
+      - name: {{ .Chart.Name }}
+        image: {{ template "imagename" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+{{- if .Values.application.command }}
+        command:
+{{- toYaml .Values.application.command | nindent 8 }}
+{{- end }}
+{{- if .Values.application.args }}
+        args:
+{{- toYaml .Values.application.args | nindent 8 }}
+{{- end }}
+        {{- if .Values.application.secretName }}
+        envFrom:
+        - secretRef:
+            name: {{ .Values.application.secretName }}
+{{- if .Values.extraEnvFrom }}
+{{- toYaml .Values.extraEnvFrom | nindent 8 }}
+{{- end }}
+        {{- else}}
+        envFrom:
+{{- if .Values.extraEnvFrom }}
+{{- toYaml .Values.extraEnvFrom | nindent 8 }}
+{{- end }}
+        {{- end }}
+        env:
+{{- if .Values.extraEnv }}
+{{- toYaml .Values.extraEnv | nindent 8 }}
+{{- end }}
+{{- if .Values.postgresql.managed }}
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: app-postgres
+              key: username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-postgres
+              key: password
+        - name: POSTGRES_HOST
+          valueFrom:
+            secretKeyRef:
+              name: app-postgres
+              key: privateIP
+{{- end }}
+{{- if .Values.application.database_url }}
+        - name: DATABASE_URL
+          value: {{ .Values.application.database_url | quote }}
+{{- end }}
+        - name: GITLAB_ENVIRONMENT_NAME
+          value: {{ .Values.gitlab.envName | quote }}
+        - name: GITLAB_ENVIRONMENT_URL
+          value: {{ .Values.gitlab.envURL | quote }}
+{{- if .Values.lifecycle }}
+        lifecycle:
+{{- toYaml .Values.lifecycle | nindent 10 }}
+{{- end }}
+        ports:
+        - name: "{{ .Values.service.name }}"
+          containerPort: {{ .Values.service.internalPort }}
+{{- if .Values.service.extraPorts }}
+{{- range $servicePort := .Values.service.extraPorts }}
+        - name: {{ $servicePort.name }}
+          containerPort: {{ $servicePort.targetPort }}
+          {{- if $servicePort.protocol }}
+          protocol: {{ $servicePort.protocol }}
+          {{- end }}
+{{- end }}
+{{- end }}
+{{- if .Values.livenessProbe.enabled }}
+        livenessProbe:
+{{- if eq .Values.livenessProbe.probeType "httpGet" }}
+          httpGet:
+            path: {{ .Values.livenessProbe.path }}
+            scheme: {{ .Values.livenessProbe.scheme }}
+            port: {{ .Values.livenessProbe.port | default .Values.service.internalPort }}
+{{- if .Values.livenessProbe.httpHeaders }}
+            httpHeaders:
+{{- range $httpHeader := .Values.livenessProbe.httpHeaders }}
+            - name: {{ $httpHeader.name }}
+              value: {{ $httpHeader.value }}
+{{- end }}
+{{- end }}
+{{- else if eq .Values.livenessProbe.probeType "tcpSocket" }}
+          tcpSocket:
+            port: {{ .Values.livenessProbe.port | default .Values.service.internalPort }}
+{{- else if eq .Values.livenessProbe.probeType "exec" }}
+          exec:
+            command:
+{{- toYaml .Values.livenessProbe.command | nindent 12 }}
+{{- end }}
+          initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+          timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+{{- end }}
+{{- if .Values.readinessProbe.enabled }}
+        readinessProbe:
+{{- if eq .Values.readinessProbe.probeType "httpGet" }}
+          httpGet:
+            path: {{ .Values.readinessProbe.path }}
+            scheme: {{ .Values.readinessProbe.scheme }}
+            port: {{ .Values.readinessProbe.port | default .Values.service.internalPort }}
+{{- if .Values.readinessProbe.httpHeaders }}
+            httpHeaders:
+{{- range $httpHeader := .Values.readinessProbe.httpHeaders }}
+            - name: {{ $httpHeader.name }}
+              value: {{ $httpHeader.value }}
+{{- end }}
+{{- end }}
+{{- else if eq .Values.readinessProbe.probeType "tcpSocket" }}
+          tcpSocket:
+            port: {{ .Values.readinessProbe.port | default .Values.service.internalPort }}
+{{- else if eq .Values.readinessProbe.probeType "exec" }}
+          exec:
+            command:
+{{- toYaml .Values.readinessProbe.command | nindent 12 }}
+{{- end }}
+          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+          timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+{{- end }}
+{{- if .Values.startupProbe.enabled }}
+        startupProbe:
+{{- if eq .Values.startupProbe.probeType "httpGet" }}
+          httpGet:
+            path: {{ .Values.startupProbe.path }}
+            scheme: {{ .Values.startupProbe.scheme }}
+            port: {{ .Values.startupProbe.port | default .Values.service.internalPort }}
+{{- if .Values.startupProbe.httpHeaders }}
+            httpHeaders:
+{{- range $httpHeader := .Values.startupProbe.httpHeaders }}
+            - name: {{ $httpHeader.name }}
+              value: {{ $httpHeader.value }}
+{{- end }}
+{{- end }}
+{{- else if eq .Values.readinessProbe.probeType "tcpSocket" }}
+          tcpSocket:
+            port: {{ .Values.startupProbe.port | default .Values.service.internalPort }}
+{{- else if eq .Values.startupProbe.probeType "exec" }}
+          exec:
+            command:
+{{- toYaml .Values.startupProbe.command | nindent 12 }}
+{{- end }}
+          initialDelaySeconds: {{ .Values.startupProbe.initialDelaySeconds }}
+          timeoutSeconds: {{ .Values.startupProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.startupProbe.failureThreshold }}
+          periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+{{- end }}
+{{- if .Values.containerSecurityContext }}
+        securityContext:
+{{- toYaml .Values.containerSecurityContext | nindent 10 }}
+{{- end }}
+        resources:
+{{- toYaml .Values.resources | nindent 10 }}
+{{- if or (.Values.persistence.enabled) (.Values.extraVolumeMounts) }}
+        volumeMounts:
+{{- if .Values.persistence.enabled }}
+{{- range $volume := .Values.persistence.volumes }}
+        - name: {{ $volume.name | quote }}
+          mountPath: {{ $volume.mount.path | quote }}
+          {{- if $volume.mount.subPath }}
+          subPath: {{ $volume.mount.subPath | quote }}
+          {{- end }}
+{{- end }}
+{{- end }}
+{{- if .Values.extraVolumeMounts }}
+{{- toYaml .Values.extraVolumeMounts | nindent 8 }}
+{{- end }}
+{{- end }}
+{{- end -}}

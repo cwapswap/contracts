@@ -1,0 +1,49 @@
+{{- if .Values.application.initializeCommand -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ template "trackableappname" . }}-db-initialize
+  labels:
+{{ include "sharedlabels" . | indent 4 }}
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-delete-policy": before-hook-creation
+    "helm.sh/hook-weight": "0"
+spec:
+  template:
+    metadata:
+      labels:
+{{ include "sharedlabels" . | indent 8 }}
+    spec:
+      restartPolicy: Never
+      {{- with $.Values.image.secrets }}
+      imagePullSecrets:
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
+      containers:
+      - name: {{ .Chart.Name }}
+        image: {{ template "imagename" . }}
+        command: ["/bin/sh"]
+        args: ["-c", "{{ .Values.application.initializeCommand }}"]
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        {{- if .Values.application.secretName }}
+        envFrom:
+        - secretRef:
+            name: {{ .Values.application.secretName }}
+{{- if .Values.extraEnvFrom }}
+{{- toYaml .Values.extraEnvFrom | nindent 8 }}
+{{- end }}
+        {{- end }}
+        env:
+{{- if .Values.application.database_url }}
+        - name: DATABASE_URL
+          value: {{ .Values.application.database_url | quote }}
+{{- end }}
+{{- if .Values.extraEnv }}
+{{- toYaml .Values.extraEnv | nindent 8 }}
+{{- end }}
+        - name: GITLAB_ENVIRONMENT_NAME
+          value: {{ .Values.gitlab.envName | quote }}
+        - name: GITLAB_ENVIRONMENT_URL
+          value: {{ .Values.gitlab.envURL | quote }}
+{{- end -}}

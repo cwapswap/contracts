@@ -1,0 +1,87 @@
+develop:
+  mnemonic: ${PRODUCTION_MNEMONIC}
+  shardToWrite: ELROND
+  shardToExecute: BNB
+  endpoint: https://coinweb-experimental-bitcoin-graphql-green.coinz.team/wallet
+
+  bootstrapConfig:
+    dataHasher: data_hasher_v2
+    controller: controller_v2
+    dependencies:
+    - decompressor_v2
+    - data_hasher
+
+  unsafe: true
+
+  gitRemoteLockIndexRepo: git@gitlab.com:coinweb/cweb-dapp-index.git
+  pathToIndexFile: .cweb-config/dapp-ecosystem.yaml
+  pathToLockIndexFile: .dapp-ecosystem-lock.yaml
+  pathToRawActionFile: ./.unfiltered-actions.yaml
+  pathToFilteredActionFile: .actions.yaml
+  packageRegistry: 'https://npm.coinweb.io'
+
+production:
+  mnemonic: ${PRODUCTION_MNEMONIC}
+  shardToWrite: ELROND
+  shardToExecute: BNB
+  endpoint: https://api-cloud.coinweb.io/wallet
+
+  bootstrapConfig:
+    dataHasher: data_hasher_v2
+    controller: controller_v2
+    dependencies:
+    - decompressor_v2
+    - data_hasher
+
+  unsafe: true
+
+  gitRemoteLockIndexRepo: git@gitlab.com:coinweb/cweb-dapp-index.git
+  pathToIndexFile: .cweb-config/dapp-ecosystem-prod.yaml
+  pathToLockIndexFile: .dapp-ecosystem-lock-prod.yaml
+  pathToRawActionFile: ./.unfiltered-actions-prod.yaml
+  pathToFilteredActionFile: .actions-prod.yaml
+  packageRegistry: 'https://npm.coinweb.io'
+
+devnet_blue:
+  mnemonic: priority supply couple broccoli balcony sort flag keep original wrong pottery version
+  shardToWrite: DEVNET_L1A
+  shardToExecute: DEVNET_L1A
+  endpoint: https://api-devnet.coinweb.io/wallet
+
+  bootstrapConfig:
+    dataHasher: data_hasher_v2
+    controller: controller_v2
+    dependencies:
+    - decompressor_v2
+    - data_hasher
+
+  unsafe: true
+
+  gitRemoteLockIndexRepo: git@gitlab.com:coinweb/cweb-dapp-index.git
+  pathToIndexFile: .cweb-config/dapp-ecosystem-devnet-blue.yaml
+  pathToLockIndexFile: .dapp-ecosystem-lock-devnet-blue.yaml
+  pathToRawActionFile: ./.unfiltered-actions-devnet-blue.yaml
+  pathToFilteredActionFile: .actions-devnet-blue.yaml
+  packageRegistry: 'https://npm.coinweb.io'
+
+prod_demo:
+  mnemonic: negative dog base document ring lesson veteran play code viable benefit turtle
+  shardToWrite: ELROND
+  shardToExecute: BNB
+  endpoint: https://bitcoin-graphql-demo.coinhq.store/wallet
+
+  bootstrapConfig:
+    dataHasher: data_hasher_v2
+    controller: controller_v2
+    dependencies:
+    - decompressor_v2
+    - data_hasher
+
+  unsafe: true
+
+  gitRemoteLockIndexRepo: git@gitlab.com:coinweb/cweb-dapp-index.git
+  pathToIndexFile: .cweb-config/dapp-ecosystem-prod-demo.yaml
+  pathToLockIndexFile: .dapp-ecosystem-lock-prod-demo.yaml
+  pathToRawActionFile: ./.unfiltered-actions-prod-demo.yaml
+  pathToFilteredActionFile: .actions-prod-demo.yaml
+  packageRegistry: 'https://npm.coinweb.io'

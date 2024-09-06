@@ -11,10 +11,19 @@ export type L1EventData = {
   recipient: string;
 };
 
+export enum Logs {
+  MethodName = 'method-name',
+  ProvidedCweb = 'provided-cweb',
+  MethodArgument = 'method-args',
+  ContractArguments = 'contract-args',
+  Custom = 'custom',
+}
+
 export type InstanceParameters = {
   l1_contract_address: string;
   owner: User;
   collateral_percentage_Int: number;
+  logs?: Logs[];
   owner_min_fee_Hex?: HexString;
   owner_percentage_fee_Int?: number;
   shard: Shard;

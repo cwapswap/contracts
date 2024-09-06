@@ -1,9 +1,9 @@
-import { type Claim, constructClaim, ClaimKey, getParameters, constructClaimKey } from '@coinweb/contract-kit';
+import { type Claim, constructClaim, ClaimKey, constructClaimKey } from '@coinweb/contract-kit';
 import type { PubKey } from '@coinweb/wallet-lib';
 
 import {
   createActivePositionIndexKey,
-  createBestPositionIndexKey,
+  createBestByQuoteIndexKey,
   createDateIndexKey,
   createPositionStateKey,
   createPositionFundsKey,
@@ -14,11 +14,13 @@ import {
   HexBigInt,
   createClosedIndexKey,
   createOwnerKey,
+  createBestByQuoteActiveIndexKey,
 } from '../../offchain/shared';
 import { CONSTANTS } from '../constants';
-import { ContractConfig, OwnerClaimBody } from '../types';
+import { L1Types, OwnerClaimBody } from '../types';
 
-import { getExpectedBlockHeight } from './contract';
+import { getExpectedBlockHeight, getInstanceParameters, getTime } from './contract';
+import { createBestByQuoteIndex } from './dataConversion';
 
 export const createPositionStateClaim = ({ id, body }: { id: string; body: PositionStateClaimBody }): Claim =>
   constructClaim(createPositionStateKey(id), body, toHex(0));
@@ -32,7 +34,7 @@ export const createFundsClaim = ({
 }: {
   positionId: string;
   amount: bigint;
-  owner: PubKey;
+  owner?: PubKey;
   baseAmount: HexBigInt;
   quoteAmount: HexBigInt;
 }): Claim =>
@@ -52,22 +54,28 @@ export const createActiveIndexClaim = ({ timestamp, positionId }: { timestamp: n
 export const createDateIndexClaim = ({ timestamp, positionId }: { timestamp: number; positionId: string }): Claim =>
   constructClaim(createDateIndexKey(timestamp, positionId), {}, toHex(0));
 
-export const createBestPositionIndexClaim = ({
+export const createBestByQuoteIndexClaim = ({
   baseAmount,
   quoteAmount,
   positionId,
 }: {
-  baseAmount: bigint;
-  quoteAmount: bigint;
+  baseAmount: bigint | HexBigInt;
+  quoteAmount: bigint | HexBigInt;
+  positionId: string;
+}): Claim =>
+  constructClaim(createBestByQuoteIndexKey(createBestByQuoteIndex(baseAmount, quoteAmount), positionId), {}, toHex(0));
+
+export const createBestByQuoteActiveIndexClaim = ({
+  baseAmount,
+  quoteAmount,
+  positionId,
+}: {
+  baseAmount: bigint | HexBigInt;
+  quoteAmount: bigint | HexBigInt;
   positionId: string;
 }): Claim =>
   constructClaim(
-    createBestPositionIndexKey(
-      quoteAmount
-        ? baseAmount / quoteAmount
-        : BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'), //TODO: Come back to this later
-      positionId,
-    ),
+    createBestByQuoteActiveIndexKey(createBestByQuoteIndex(baseAmount, quoteAmount), positionId),
     {},
     toHex(0),
   );
@@ -90,13 +98,13 @@ export const createOwnerClaim = ({ owner }: { owner: string }): Claim =>
     createOwnerKey(),
     {
       owner,
-      updatedAt: Date.now(),
+      updatedAt: getTime(),
     } satisfies OwnerClaimBody,
     toHex(0),
   );
 
-export const createL1AcceptEventClaimKey = (positionId: string, nonce: bigint): ClaimKey => {
-  const parameters: ContractConfig = getParameters('contract/parameters.json');
+export const createEvmEventClaimKey = (positionId: string, nonce: bigint): ClaimKey => {
+  const parameters = getInstanceParameters(L1Types.Evm);
 
   return constructClaimKey(
     {

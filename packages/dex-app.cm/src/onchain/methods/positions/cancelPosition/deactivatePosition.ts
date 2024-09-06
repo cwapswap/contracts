@@ -22,6 +22,7 @@ import {
   PositionFundsClaimBody,
   PositionStateClaimBody,
   createActivePositionIndexKey,
+  createBestByQuoteActiveIndexKey,
   createPositionFundsKey,
 } from '../../../../offchain/shared';
 import { CONSTANTS, PRIVATE_METHODS } from '../../../constants';
@@ -31,6 +32,8 @@ import {
   createClosedPositionBlockFilter,
   createExpirationPositionBlockFilter,
   createPositionStateClaim,
+  createBestByQuoteIndex,
+  getTime,
 } from '../../../utils';
 
 export const deactivatePosition = selfCallWrapper((context: Context) => {
@@ -74,11 +77,17 @@ export const deactivatePosition = selfCallWrapper((context: Context) => {
   const firstTransactionFee = 300n;
   const secondTransactionFee = 1000n;
 
-  const closingPlannedDate = Date.now() + CONSTANTS.CLOSE_POSITION_TIMEOUT;
+  const closingPlannedDate = getTime() + CONSTANTS.CLOSE_POSITION_TIMEOUT;
 
   return [
     constructContinueTx(context, [
       constructTake(createActivePositionIndexKey(positionState.createdAt, positionId)),
+      constructTake(
+        createBestByQuoteActiveIndexKey(
+          createBestByQuoteIndex(positionState.baseAmount, positionState.quoteAmount),
+          positionId,
+        ),
+      ),
       constructStore(
         createPositionStateClaim({
           id: positionId,
@@ -109,7 +118,11 @@ export const deactivatePosition = selfCallWrapper((context: Context) => {
                     createdAt: positionState.createdAt,
                     quoteAmount: positionState.quoteAmount,
                     recipient: positionState.recipient,
-                  } satisfies Pick<PositionStateClaimBody, 'baseAmount' | 'createdAt' | 'quoteAmount' | 'recipient'>,
+                    chainData: positionState.chainData,
+                  } satisfies Pick<
+                    PositionStateClaimBody,
+                    'baseAmount' | 'createdAt' | 'quoteAmount' | 'recipient' | 'chainData'
+                  >,
                 ],
               },
               contractInfo: {

@@ -9,12 +9,13 @@ import {
 
 import {
   CollateralClaimBody,
-  ORDER_ACTIVITY_STATUS,
   OrderStateClaimBody,
   MakerDepositClaimBody,
   createOrderCollateralKey,
   createMakerDepositKey,
   toHex,
+  createActiveOrderIndexKey,
+  createBestActiveOrderIndexKey,
 } from '../../../../offchain/shared';
 import { TypedClaim } from '../../../types';
 import {
@@ -25,23 +26,29 @@ import {
   getContractIssuer,
   getMethodArguments,
   getReadClaimByIndex,
+  createRateIndex,
+  getUser,
 } from '../../../utils';
+import { isEqualUser } from '../../../utils/user';
 
 import { CloseOrderPrivateArguments } from './types';
 
 export const closeOrder = selfCallWrapper((context: Context) => {
   const { availableCweb } = getCallParameters(context);
+  const signer = getUser(context);
 
   const [id, statusReason] = getMethodArguments<CloseOrderPrivateArguments>(context);
 
   const stateClaim = getReadClaimByIndex<TypedClaim<OrderStateClaimBody>>(context)(0);
 
-  if (!stateClaim) {
+  const orderState = stateClaim?.body;
+
+  if (!orderState) {
     throw new Error('Order is not exist');
   }
 
-  if (stateClaim.body.activityStatus !== ORDER_ACTIVITY_STATUS.CANCELLING) {
-    throw new Error("Order can't be closed");
+  if (!isEqualUser(orderState.owner, signer)) {
+    throw new Error('Operation is not permitted');
   }
 
   const collateralClaim = getReadClaimByIndex<TypedClaim<CollateralClaimBody>>(context)(1);
@@ -65,6 +72,8 @@ export const closeOrder = selfCallWrapper((context: Context) => {
   return [
     constructContinueTx(context, [
       passCwebFrom(issuer, availableCweb),
+      constructTake(createActiveOrderIndexKey(orderState.createdAt, id)),
+      constructTake(createBestActiveOrderIndexKey(createRateIndex(orderState.baseAmount, orderState.l1Amount), id)),
       constructTake(createOrderCollateralKey(id)),
       constructTake(createMakerDepositKey(deposit.owner)),
       constructStore(
@@ -74,6 +83,7 @@ export const closeOrder = selfCallWrapper((context: Context) => {
             ...stateClaim.body,
             activityStatus: statusReason,
             collateral: toHex(0),
+            covering: toHex(0),
           },
         }),
       ),

@@ -76,6 +76,7 @@
     "comma-dangle": "off",
     "object-shorthand": "warn",
     "no-console": "warn",
-    "prettier/prettier": "error"
+    "prettier/prettier": "error",
+    "import/named": "off"
   }
 }

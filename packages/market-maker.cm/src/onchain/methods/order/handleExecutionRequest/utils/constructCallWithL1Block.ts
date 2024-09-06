@@ -15,7 +15,7 @@ import {
   toHex,
   createRequestFundsKey,
 } from '../../../../../offchain/shared';
-import { PRIVATE_METHODS } from '../../../../constants';
+import { CONSTANTS, PRIVATE_METHODS } from '../../../../constants';
 import {
   createExpirationBlockFilter,
   createExpirationClaimKey,
@@ -24,6 +24,7 @@ import {
   getContractRef,
   wrapWithJumpEventBlockFilter,
   wrapWithJumpEventClaimKey,
+  wrapWithJumpEventIssuer,
 } from '../../../../utils';
 import { HandleExecutionBlockTriggeredArguments } from '../../handleExecutionBlockTriggered/types';
 
@@ -67,10 +68,10 @@ export const constructCallWithL1Block = ({
           },
           contractArgs: [
             constructRead(
-              'L2BlockInfoProvider',
+              wrapWithJumpEventIssuer(),
               wrapWithJumpEventClaimKey(createL1ExecuteEventClaimKey(requestId, nonce), issuer),
             ),
-            constructRead('L2BlockInfoProvider', createExpirationClaimKey(expirationDate)),
+            constructRead(CONSTANTS.BLOCK_HEIGHT_INFO_PROVIDER, createExpirationClaimKey(expirationDate)),
             constructRead(issuer, createRequestStateKey(requestId)),
             constructRead(issuer, createOrderStateKey(orderId)),
             constructRead(issuer, createMakerDepositKey(owner)),

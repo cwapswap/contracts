@@ -7,12 +7,11 @@ import {
   extractUser,
   getAuthenticated,
   getMethodArguments,
-  getParameters,
   selfCallWrapper,
 } from '@coinweb/contract-kit';
 
-import { ContractConfig, OwnerClaimBody } from '../../../types';
-import { createOwnerClaim } from '../../../utils';
+import { OwnerClaimBody } from '../../../types';
+import { createOwnerClaim, getInstanceParameters } from '../../../utils';
 
 export const changeContractOwner = selfCallWrapper((context: Context) => {
   const { tx } = context;
@@ -21,7 +20,7 @@ export const changeContractOwner = selfCallWrapper((context: Context) => {
 
   const ownerClaim = extractRead(extractContractArgs(tx)[0])?.[0]?.content.body as OwnerClaimBody | undefined;
 
-  const currentOwner = ownerClaim?.owner || (getParameters('contract/parameters.json') as ContractConfig).owner;
+  const currentOwner = ownerClaim?.owner || getInstanceParameters().owner;
 
   const signer = extractUser(getAuthenticated(tx)).payload;
 

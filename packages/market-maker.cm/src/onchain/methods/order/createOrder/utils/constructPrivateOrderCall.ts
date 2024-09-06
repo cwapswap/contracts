@@ -5,7 +5,6 @@ import {
   constructContinueTx,
   constructContractRef,
   constructRead,
-  passCwebFrom,
 } from '@coinweb/contract-kit';
 
 import { OrderStateClaimBody, createOrderStateKey, createMakerDepositKey } from '../../../../../offchain/shared';
@@ -21,11 +20,11 @@ export const constructPrivateOrderCall = (
   providedCweb: bigint,
   authenticated: AuthInfo,
 ) => {
-  const transactionFee = 900n;
+  const transactionFee = 1000n;
 
   return constructContinueTx(
     context,
-    [passCwebFrom(issuer, providedCweb)],
+    [],
     [
       {
         callInfo: {

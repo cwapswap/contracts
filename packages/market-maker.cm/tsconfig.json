@@ -9,5 +9,5 @@
     "esModuleInterop": true,
     "types": ["vitest/globals"]
   },
-  "include": ["src/**/*.ts", "vitest.config.ts", "src/onchain/methods/order/handleExecutionRequest/utils"]
+  "include": ["src/**/*.ts", "vitest.config.ts"]
 }

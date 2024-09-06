@@ -20,11 +20,9 @@ export const cancelPositionPublic = (context: Context) => {
     throw new Error('Cweb was not provided');
   }
 
-  const [, positionId, providedCallFee] = getMethodArguments(context) as [unknown, string, string];
+  const [, positionId] = getMethodArguments(context) as [unknown, string, string];
 
-  const dueCallFee = FEE.CANCEL_POSITION;
-
-  if (dueCallFee > BigInt(providedCallFee)) {
+  if (BigInt(availableCweb) < FEE.CANCEL_POSITION) {
     throw new Error('Insufficient fee provided'); //TODO! Return a rest of cweb to signer;
   }
 

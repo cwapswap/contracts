@@ -1,7 +1,0 @@
-{
-  "mnemonic": "priority supply couple broccoli balcony sort flag keep original wrong pottery version",
-  "shardToWrite": "DEVNET_L1B",
-  "shardToExecute": "DEVNET_L1B",
-  "endpoint": "https://api-devnet.coinweb.io/wallet",
-  "unsafe": true
-}

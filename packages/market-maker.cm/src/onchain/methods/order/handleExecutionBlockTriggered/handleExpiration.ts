@@ -1,7 +1,6 @@
 import {
   AuthInfo,
   constructContinueTx,
-  constructRead,
   constructStore,
   constructTake,
   Context,
@@ -9,53 +8,53 @@ import {
 } from '@coinweb/contract-kit';
 
 import {
-  createOrderCollateralKey,
+  createPendingOrderByOwnerIndexKey,
+  createRequestByMarketMakerIndexKey,
+  createRequestByOrderIndexKey,
   createRequestFundsKey,
   HexBigInt,
   ORDER_ACTIVITY_STATUS,
   OrderStateClaimBody,
+  PUBLIC_METHODS,
+  REQUEST_EXECUTION_STATUS,
+  RequestStateClaimBody,
 } from '../../../../offchain/shared';
-import { PRIVATE_METHODS } from '../../../constants';
 import {
   constructConditional,
+  createBestActiveOrderIndexClaim,
   createClosedOrderIndexClaim,
   createOrderActiveIndexClaim,
   createOrderStateClaim,
+  createRequestStateClaim,
   getContractIssuer,
   getContractRef,
 } from '../../../utils';
-import { ExecutionFallbackArguments } from '../executionFallback/types';
+import { HandleExecutionRequestArguments } from '../handleExecutionRequest/types';
 
 //TODO! Add automatic request
 export const handleExpiration = ({
   context,
-  contractId,
-  methodName,
   quoteWallet,
   providedCweb,
   authInfo,
   requestId,
   orderId,
   requestFunds,
-  collateral,
-  quoteAmount,
   order,
+  request,
 }: {
   context: Context;
-  contractId: string;
-  methodName: string;
   quoteWallet: string;
   providedCweb: bigint;
   authInfo: AuthInfo;
   requestId: string;
   orderId: string;
   requestFunds: HexBigInt;
-  collateral: HexBigInt;
-  quoteAmount: HexBigInt;
   order: OrderStateClaimBody;
+  request: RequestStateClaimBody;
 }) => {
-  const transactionFee = 1000n;
-  const availableCweb = BigInt(requestFunds) + BigInt(collateral) - transactionFee + providedCweb;
+  const transactionFee = 2000n;
+  const availableCweb = BigInt(requestFunds) + providedCweb - transactionFee;
 
   const isOrderCompleted = !BigInt(order.collateral);
 
@@ -65,20 +64,51 @@ export const handleExpiration = ({
       [
         passCwebFrom(getContractIssuer(context), transactionFee),
         constructTake(createRequestFundsKey(requestId)),
-        constructTake(createOrderCollateralKey(orderId)),
+        constructTake(createPendingOrderByOwnerIndexKey(order.owner, request.createdAt, orderId)),
+        constructTake(createRequestByMarketMakerIndexKey(order.owner, request.createdAt, requestId)),
+        constructTake(createRequestByOrderIndexKey(orderId, request.createdAt, requestId)),
         constructStore(
-          createOrderStateClaim({
+          createRequestStateClaim({
             id: orderId,
             body: {
-              ...order,
-              activityStatus: isOrderCompleted ? ORDER_ACTIVITY_STATUS.EXPIRED : ORDER_ACTIVITY_STATUS.ACTIVE,
+              ...request,
+              executionStatus: REQUEST_EXECUTION_STATUS.FAILED,
             },
           }),
         ),
         ...constructConditional(
           isOrderCompleted,
-          constructStore(createClosedOrderIndexClaim({ id: orderId })),
-          constructStore(createOrderActiveIndexClaim({ timestamp: order.createdAt, id: orderId })),
+          [
+            constructStore(createClosedOrderIndexClaim({ id: orderId })),
+            constructStore(
+              createOrderStateClaim({
+                id: orderId,
+                body: {
+                  ...order,
+                  activityStatus: ORDER_ACTIVITY_STATUS.EXPIRED,
+                },
+              }),
+            ),
+          ],
+          [
+            constructStore(
+              createOrderStateClaim({
+                id: orderId,
+                body: {
+                  ...order,
+                  activityStatus: ORDER_ACTIVITY_STATUS.ACTIVE,
+                },
+              }),
+            ),
+            constructStore(createOrderActiveIndexClaim({ timestamp: order.createdAt, id: orderId })),
+            constructStore(
+              createBestActiveOrderIndexClaim({
+                id: orderId,
+                baseAmount: order.baseAmount,
+                quoteAmount: order.l1Amount,
+              }),
+            ),
+          ],
         ),
       ],
       [
@@ -86,14 +116,19 @@ export const handleExpiration = ({
           callInfo: {
             ref: getContractRef(context),
             methodInfo: {
-              methodName: PRIVATE_METHODS.EXECUTION_FALLBACK,
-              methodArgs: [contractId, methodName, quoteAmount, quoteWallet] satisfies ExecutionFallbackArguments,
+              methodName: PUBLIC_METHODS.REQUEST_EXECUTION,
+              methodArgs: [
+                request.quoteAmount,
+                quoteWallet,
+                request.fallbackContractId,
+                request.fallbackMethodName,
+              ] satisfies HandleExecutionRequestArguments,
             },
             contractInfo: {
               providedCweb: availableCweb,
               authenticated: authInfo,
             },
-            contractArgs: [constructRead(getContractIssuer(context), createRequestFundsKey(requestId))],
+            contractArgs: [],
           },
         },
       ],

@@ -5,14 +5,19 @@ import {
   getMethodArguments,
   extractContractInfo,
   extractUser,
-  getAuthenticated,
-  getParameters,
 } from '@coinweb/contract-kit';
 
-import { PositionStateClaimBody, ACTIVITY_STATUS, PAYMENT_STATUS, HexBigInt, FEE } from '../../../../offchain/shared';
+import {
+  PositionStateClaimBody,
+  ACTIVITY_STATUS,
+  PAYMENT_STATUS,
+  HexBigInt,
+  FEE,
+  toHex,
+  ChainData,
+} from '../../../../offchain/shared';
 import { CONSTANTS } from '../../../constants';
-import { ContractConfig } from '../../../types';
-import { createCheckPositionCall, hashClaimBody } from '../../../utils';
+import { createCreatePositionCallPrivate, getInstanceParameters, getTime, hashClaimBody } from '../../../utils';
 
 export const createPositionPublic = (context: Context) => {
   const { tx } = context;
@@ -22,58 +27,52 @@ export const createPositionPublic = (context: Context) => {
     throw new Error('Cweb was not provided');
   }
 
-  const [, cwebAmount, l1Amount, recipientL1, providedOwnerFee, providedCallFee, ownerAddress] = getMethodArguments(
-    context,
-  ) as [unknown, HexBigInt, HexBigInt, string, string, string, string | undefined];
+  const [, l1Amount, l1Address, chainData] = getMethodArguments(context) as [unknown, HexBigInt, string, ChainData];
 
-  const parameters = getParameters('contract/parameters.json') as ContractConfig;
+  const parameters = getInstanceParameters();
 
   const ownerMinFee = BigInt(parameters.owner_min_fee || 0);
   const ownerPercentageFee = BigInt(parameters.owner_percentage_fee || 0);
-  const positionAmount = BigInt(cwebAmount);
+
+  const callFee = FEE.CREATE_POSITION;
+
+  let positionAmount = ((availableCweb - callFee) * 100n) / (100n + ownerPercentageFee);
 
   const calculatedOwnerPercentageFee = (positionAmount * ownerPercentageFee) / 100n;
 
-  const dueOwnerFee = calculatedOwnerPercentageFee > ownerMinFee ? calculatedOwnerPercentageFee : ownerMinFee;
+  let ownerFee = calculatedOwnerPercentageFee;
 
-  const dueCallFee = FEE.CREATE_POSITION;
-
-  if (dueOwnerFee > BigInt(providedOwnerFee)) {
-    throw new Error('Insufficient fee provided to owner'); //TODO! Return a rest of cweb to signer;
+  if (calculatedOwnerPercentageFee < ownerMinFee) {
+    ownerFee = ownerMinFee;
+    positionAmount = availableCweb - callFee - ownerFee;
   }
 
-  if (dueCallFee > BigInt(providedCallFee)) {
-    throw new Error('Insufficient fee provided'); //TODO! Return a rest of cweb to signer;
-  }
+  const signer = extractUser(auth).payload as string | undefined;
 
-  if (positionAmount + dueCallFee + dueOwnerFee > availableCweb) {
-    throw new Error('Insufficient cweb provided'); //TODO! Return a rest of cweb to signer;
-  }
-
-  const signer = ownerAddress || (extractUser(getAuthenticated(tx)).payload as string);
-
-  const createdAt = Date.now();
+  const createdAt = getTime();
 
   const positionState: PositionStateClaimBody = {
-    recipient: recipientL1,
-    baseAmount: cwebAmount,
+    recipient: l1Address,
+    baseAmount: toHex(positionAmount),
     quoteAmount: l1Amount,
     activityStatus: ACTIVITY_STATUS.ACTIVE,
     paymentStatus: PAYMENT_STATUS.PAYABLE,
-    funds: cwebAmount,
+    funds: toHex(positionAmount),
     createdAt,
     expirationDate: createdAt + CONSTANTS.POSITION_LIFE_TIME,
+    chainData,
+    txId: context.call.txid,
   };
 
   const positionId = hashClaimBody(positionState);
 
   const issuer = constructContractIssuer(getContractId(tx));
 
-  return createCheckPositionCall(
+  return createCreatePositionCallPrivate(
     context,
     issuer,
     positionId,
-    [positionId, positionState, signer, providedOwnerFee],
+    [positionId, positionState, signer, toHex(ownerFee)],
     availableCweb,
     auth,
   );

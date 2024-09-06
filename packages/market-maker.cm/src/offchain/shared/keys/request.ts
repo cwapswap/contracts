@@ -4,8 +4,11 @@ import { Key } from '../constants';
 
 export const createRequestStateFirstPart = () => [Key.REQUEST_STATE];
 export const createRequestFundsFirstPart = () => [Key.REQUEST_FUNDS];
-export const createRequestByOrderIndexFirstPart = (orderId: string) => [Key.REQUEST_STATE, orderId];
-export const createRequestByMarketMakerIndexFirstPart = (marketMaker: User) => [Key.REQUEST_STATE, marketMaker];
+export const createRequestByOrderIndexFirstPart = (orderId: string) => [Key.REQUEST_BY_ORDER_INDEX, orderId];
+export const createRequestByMarketMakerIndexFirstPart = (marketMaker: User) => [
+  Key.REQUEST_BY_MAKER_INDEX,
+  marketMaker,
+];
 
 export const createRequestStateKey = (id: string) =>
   ({

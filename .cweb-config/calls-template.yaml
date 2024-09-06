@@ -1,2 +1,2 @@
 calls:
-    - !include packages/dex-app.cm/deploy/.calls-package.yaml
+    - !include packages/market-maker.cm/deploy/.calls-package.yaml

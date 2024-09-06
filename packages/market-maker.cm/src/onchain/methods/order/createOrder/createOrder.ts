@@ -15,6 +15,7 @@ import {
   MakerDepositClaimBody,
   createOrderStateKey,
   createMakerDepositKey,
+  createOrderCollateralKey,
 } from '../../../../offchain/shared';
 import { CONSTANTS, PRIVATE_METHODS } from '../../../constants';
 import { TypedClaim } from '../../../types';
@@ -25,17 +26,17 @@ import {
   createOrderActiveIndexClaim,
   createOrderCollateralClaim,
   createOrderDateIndexClaim,
-  createOrderOwnerIndexClaim,
+  createOrderByOwnerIndexClaim,
   createOrderStateClaim,
   createMakerDepositClaim,
   getCallParameters,
   getContractIssuer,
   getContractRef,
-  getInstanceParameters,
   getMethodArguments,
   getReadClaimByIndex,
   getUser,
   hashObject,
+  createBestActiveOrderIndexClaim,
 } from '../../../utils';
 import { DeactivateOrderPrivateArguments } from '../cancelOrder/types';
 
@@ -67,16 +68,14 @@ export const createOrder = selfCallWrapper((context: Context) => {
   const depositAmount = BigInt(depositClaim.fees_stored);
 
   const baseAmount = BigInt(initialState.baseAmount);
-  const quoteAmount = BigInt(initialState.quoteAmount);
-
-  const collateralPercentage = getInstanceParameters().collateral_percentage_Int;
-  const collateral = (baseAmount * BigInt(collateralPercentage)) / 100n;
+  const quoteAmount = BigInt(initialState.l1Amount);
+  const collateral = BigInt(initialState.collateral);
 
   if (depositAmount < collateral) {
     throw new Error('Not enough deposit');
   }
 
-  const firstTransactionFee = 1200n + baseAmount;
+  const firstTransactionFee = 1200n;
   const secondTransactionFee = 1000n;
 
   const user = getUser(context);
@@ -111,6 +110,13 @@ export const createOrder = selfCallWrapper((context: Context) => {
         }),
       ),
       constructStore(
+        createBestActiveOrderIndexClaim({
+          id,
+          baseAmount,
+          quoteAmount,
+        }),
+      ),
+      constructStore(
         createOrderDateIndexClaim({
           id,
           timestamp: initialState.createdAt,
@@ -124,7 +130,7 @@ export const createOrder = selfCallWrapper((context: Context) => {
         }),
       ),
       constructStore(
-        createOrderOwnerIndexClaim({
+        createOrderByOwnerIndexClaim({
           id,
           user,
           timestamp: initialState.createdAt,
@@ -139,7 +145,7 @@ export const createOrder = selfCallWrapper((context: Context) => {
           callInfo: {
             ref: getContractRef(context),
             methodInfo: {
-              methodName: PRIVATE_METHODS.DEACTIVATE_ORDER,
+              methodName: PRIVATE_METHODS.CLOSE_ORDER,
               methodArgs: [id, ORDER_ACTIVITY_STATUS.EXPIRED] satisfies DeactivateOrderPrivateArguments,
             },
             contractInfo: {
@@ -148,10 +154,10 @@ export const createOrder = selfCallWrapper((context: Context) => {
             },
             contractArgs: [
               constructRead(issuer, createOrderStateKey(id)),
+              constructRead(issuer, createOrderCollateralKey(id)),
+              constructRead(issuer, createMakerDepositKey(user)),
               constructBlock([
-                createExpirationBlockFilter(
-                  initialState.createdAt + CONSTANTS.ORDER_LIFE_TIME - CONSTANTS.CLOSE_ORDER_TIMEOUT,
-                ),
+                createExpirationBlockFilter(initialState.createdAt + CONSTANTS.ORDER_LIFE_TIME),
                 createClosedOrderBlockFilter(issuer, id),
               ]),
             ],

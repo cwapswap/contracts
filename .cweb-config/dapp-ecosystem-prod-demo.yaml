@@ -1,0 +1,185 @@
+# This is a "index source" that specifies the dApp world as you see it.
+#
+# This index defines what interpreters, contract templates etc you want
+# to use, and what they should be called.
+#
+# You can include external sources for this information in the `includes`
+# section, and you include your own smart contract in the `contract_templates`
+# section.
+#
+
+includes:
+  - url: >-
+      https://gitlab.com/coinweb/cweb-dapp-index/-/raw/ee216c344b394730f83edba1b70e518542bbf33a/dapp_lock_index.yaml
+    blake3: 3b8f3da68107337dde126526e0ed0e99d477c81a48bb83aa3fffb81a2b18f743
+
+
+interpreters: {}
+
+contract_templates:
+  # Our contract module.  The contract module is an npm package created in the `dist/out`
+  # directory using the `yarn build` and `yarn pack` commands.
+  - file:///./packages/dex-app.cm/dist/out/my-contract-module.tgz
+  - file:///./packages/market-maker.cm/dist/out/my-contract-module.tgz
+
+contract_instances:
+  - alias: btc_offer_maker 0.1.11+prod
+    template: dex-app.cm v0.1.11
+    parameters:
+      content:
+        l1_type: 1
+        shard: btc
+        address_prefix: '05'
+        owner: 032691594ed340fa1a96ac45a9d8920faf51bd13960f5f04bbfe53afa700048dca
+        owner_min_fee: '0x2386F26FC10000'
+        owner_percentage_fee: 1
+        logs:
+          - method-name
+          - provided-cweb
+          - method-args
+          - contract-args
+          - custom
+
+  # - alias: eth_offer_maker 0.0.9+prod-demo
+  #   template: dex-app.cm v0.0.9
+  #   parameters:
+  #     content:
+  #       shard: eth
+  #       l1_type: 0
+  #       l1_contract_address: '0xb18D9349dEed2604b5b31155BAe19c7E43375632'
+  #       owner: 032691594ed340fa1a96ac45a9d8920faf51bd13960f5f04bbfe53afa700048dca
+  #       owner_min_fee: '0x2386F26FC10000'
+  #       owner_percentage_fee: 1
+  #       logs: 
+  #         - method-name
+  #         - provided-cweb
+  #         - method-args
+  #         - contract-args
+  #         - custom
+  
+  # - alias: bnb_offer_maker 0.0.9+prod-demo
+  #   template: dex-app.cm v0.0.9
+  #   parameters:
+  #     content:
+  #       shard: bnb
+  #       l1_type: 0        
+  #       l1_contract_address: '0x688a12C3dd1b92F4739E40B4313Ad15540B2B377'
+  #       owner: 032691594ed340fa1a96ac45a9d8920faf51bd13960f5f04bbfe53afa700048dca
+  #       owner_min_fee: '0x2386F26FC10000'
+  #       owner_percentage_fee: 1
+  #       logs: 
+  #         - method-name
+  #         - provided-cweb
+  #         - method-args
+  #         - contract-args
+  #         - custom
+
+  # - alias: usdt_eth_offer_maker 0.0.9+prod-demo
+  #   template: dex-app.cm v0.0.9
+  #   parameters:
+  #     content:
+  #       shard: eth
+  #       l1_type: 0
+  #       l1_contract_address: '0x688a12C3dd1b92F4739E40B4313Ad15540B2B377'
+  #       owner: 032691594ed340fa1a96ac45a9d8920faf51bd13960f5f04bbfe53afa700048dca
+  #       owner_min_fee: '0x2386F26FC10000'
+  #       owner_percentage_fee: 1
+  #       logs: 
+  #         - method-name
+  #         - provided-cweb
+  #         - method-args
+  #         - contract-args
+  #         - custom
+
+  # - alias: usdt_bnb_offer_maker 0.0.9+prod-demo
+  #   template: dex-app.cm v0.0.9
+  #   parameters:
+  #     content:
+  #       shard: bnb
+  #       l1_type: 0
+  #       l1_contract_address: '0xb88AB8c7e5F3CE5644e9Acd43EB9061dB44cCFbE'
+  #       owner: 032691594ed340fa1a96ac45a9d8920faf51bd13960f5f04bbfe53afa700048dca
+  #       owner_min_fee: '0x2386F26FC10000'
+  #       owner_percentage_fee: 1
+  #       logs: 
+  #         - method-name
+  #         - provided-cweb
+  #         - method-args
+  #         - contract-args
+  #         - custom
+
+  # - alias: eth_dex_pact_maker v0.0.10+prod-demo
+  #   template: market-maker.cm v0.0.10
+  #   parameters:
+  #     content:
+  #       shard: eth
+  #       l1_contract_address: '0x4F336FBEAE4Ad9EacB3881639dE18110Ec308BbB'
+  #       owner:
+  #         auth: EcdsaContract
+  #         payload: 032691594ed340fa1a96ac45a9d8920faf51bd13960f5f04bbfe53afa700048dca
+  #       collateral_percentage_Int: 100
+  #       owner_min_fee_Hex: '0x2386F26FC10000'
+  #       owner_percentage_fee_Int: 1
+  #       logs: 
+  #         - method-name
+  #         - provided-cweb
+  #         - method-args
+  #         - contract-args
+  #         - custom
+
+  # - alias: bnb_pact_maker v0.0.10+prod-demo
+  #   template: market-maker.cm v0.0.10
+  #   parameters:
+  #     content:
+  #       shard: bnb
+  #       l1_contract_address: '0x61dfB1684c43e1F6D712d4A73bCd2d44C684F4Db'
+  #       owner:
+  #         auth: EcdsaContract
+  #         payload: 032691594ed340fa1a96ac45a9d8920faf51bd13960f5f04bbfe53afa700048dca
+  #       collateral_percentage_Int: 100
+  #       owner_min_fee_Hex: '0x2386F26FC10000'
+  #       owner_percentage_fee_Int: 1
+  #       logs: 
+  #         - method-name
+  #         - provided-cweb
+  #         - method-args
+  #         - contract-args
+  #         - custom
+
+  # - alias: usdt_eth_dex_pact_maker v0.0.10+prod-demo
+  #   template: market-maker.cm v0.0.10
+  #   parameters:
+  #     content:
+  #       shard: eth
+  #       l1_contract_address: '0x61dfB1684c43e1F6D712d4A73bCd2d44C684F4Db'
+  #       owner:
+  #         auth: EcdsaContract
+  #         payload: 032691594ed340fa1a96ac45a9d8920faf51bd13960f5f04bbfe53afa700048dca
+  #       collateral_percentage_Int: 100
+  #       owner_min_fee_Hex: '0x2386F26FC10000'
+  #       owner_percentage_fee_Int: 1
+  #       logs: 
+  #         - method-name
+  #         - provided-cweb
+  #         - method-args
+  #         - contract-args
+  #         - custom
+
+  # - alias: usdt_bnb_pact_maker v0.0.10+prod-demo
+  #   template: market-maker.cm v0.0.10
+  #   parameters:
+  #     content:
+  #       shard: bnb
+  #       l1_contract_address: '0xb18D9349dEed2604b5b31155BAe19c7E43375632'
+  #       owner:
+  #         auth: EcdsaContract
+  #         payload: 032691594ed340fa1a96ac45a9d8920faf51bd13960f5f04bbfe53afa700048dca
+  #       collateral_percentage_Int: 100
+  #       owner_min_fee_Hex: '0x2386F26FC10000'
+  #       owner_percentage_fee_Int: 1
+  #       logs: 
+  #         - method-name
+  #         - provided-cweb
+  #         - method-args
+  #         - contract-args
+  #         - custom

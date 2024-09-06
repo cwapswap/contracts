@@ -72,5 +72,5 @@ export const parseL1EventData = (data: string): L1EventData => {
 };
 
 export const createRateIndex = (base: HexBigInt | bigint, quote: HexBigInt | bigint) => {
-  return (BigInt(quote) * BigInt(1e18)) / BigInt(base); //TODO! Check this approach
+  return BigInt(Number(quote) * 1e18) / BigInt(base); //TODO! Check this approach
 };

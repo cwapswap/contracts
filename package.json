@@ -1,53 +1,67 @@
 {
   "name": "dex-tx",
-  "packageManager": "yarn@4.2.2",
+  "packageManager": "yarn@4.4.0",
   "private": true,
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "build": "yarn build:cm && yarn build:non-cm && yarn create-index",
+    "build": "yarn build:cm && yarn build:non-cm",
+    "build:production": "yarn build:cm && yarn workspace dapp-ui build:production",
     "build:cm": "yarn workspaces foreach -Ap --include 'packages/*.cm' run build",
     "build:non-cm": "yarn workspaces foreach -Ap --include 'packages/*' --exclude 'packages/*.cm' run build",
-    "create-index": "cweb-tool create-index .cweb-config/dapp-ecosystem.yaml .dapp-ecosystem-lock.yaml -c ./.cweb-config/config.json",
+    "create-index": "cweb-tool create-index -c ./.cweb-config/config.yaml --profile $REGISTRATION_PROFILE",
+    "publish-index": "cweb-tool publish-index -c ./.cweb-config/config.yaml --profile $REGISTRATION_PROFILE",
     "deploy-contracts": "yarn publish-actions",
     "call-contracts": "yarn call-contracts:prepare && yarn call-contracts:invoke",
     "call-contracts:prepare": "yarn workspaces foreach --all run prepare-for-package && yarn node ./.cweb-config/create-calls.mjs",
-    "call-contracts:invoke": "cweb-tool call .cweb-config/calls.yaml -c ./.cweb-config/config.json",
-    "execute-actions": "echo \"*** THIS MIGHT TAKE A LONG TIME ***\"; sleep 1; cweb-tool execute-actions ./.actions.yaml -c ./.cweb-config/config.json",
-    "filter-actions": "cweb-tool filter-actions ./.unfiltered-actions.yaml .actions.yaml -c ./.cweb-config/config.json",
-    "gather-actions": "cweb-tool gather-actions .dapp-ecosystem-lock.yaml .unfiltered-actions.yaml -c ./.cweb-config/config.json",
-    "publish-actions": "cweb-tool publish .cweb-config/dapp-ecosystem.yaml -c ./.cweb-config/config.json",
+    "call-contracts:invoke": "cweb-tool call .cweb-config/calls.yaml -c ./.cweb-config/config.yaml --profile $REGISTRATION_PROFILE",
+    "execute-actions": "echo \"*** THIS MIGHT TAKE A LONG TIME ***\"; sleep 1; cweb-tool execute-actions -c ./.cweb-config/config.yaml --profile $REGISTRATION_PROFILE",
+    "filter-actions": "cweb-tool filter-actions -c ./.cweb-config/config.yaml --profile $REGISTRATION_PROFILE",
+    "gather-actions": "cweb-tool gather-actions -c ./.cweb-config/config.yaml --profile $REGISTRATION_PROFILE",
+    "publish-actions": "cweb-tool publish -c ./.cweb-config/config.yaml --profile $REGISTRATION_PROFILE",
     "clean": "yarn clean:me && yarn workspaces foreach -Ap run clean",
-    "clean:me": "rm -rf .dapp-ecosystem-lock.yaml .unfiltered-actions.yaml .actions.yaml",
+    "clean:me": "rm -rf .dapp-ecosystem-lock*.yaml .unfiltered-actions*.yaml .actions*.yaml",
     "test": "yarn workspaces foreach -Ap run test",
+    "test:prepare": "yarn simulate && yarn workspaces foreach -Ap run test:prepare",
+    "simulate": "cweb-tool simulate .dapp-ecosystem-lock-test.yaml prepared-state.json -c ./.cweb-config/config.yaml --profile $REGISTRATION_PROFILE",
     "setup-ide:vscode": "yarn dlx @yarnpkg/sdks vscode",
     "install:with-node-modules": "yarn config set nodeLinker node-modules && yarn install",
-    "preinstall": "./scripts/preinstall.env.sh && yarn prepare",
+    "preinstall": "./scripts/preinstall.env.sh",
     "dev": "yarn workspaces foreach -Apiv run dev",
     "typecheck": "yarn workspaces foreach -Ap run typecheck",
-    "prepare": "husky || true"
+    "prepare": "yarn --cwd=../../. prepare:dex-tx",
+    "prepare:dapp-ui": "yarn husky packages/dapp-ui/.husky"
   },
   "resolutions": {
-    "@coinweb/cweb-tool": "1.0.34",
-    "@coinweb/wallet-lib": "^0.1.112-esm"
+    "@coinweb/cweb-tool": "2.0.17",
+    "@coinweb/wallet-lib": "0.1.113-esm",
+    "@coinweb/self-register": "0.1.3",
+    "@coinweb/claims-client": "0.1.6-debug",
+    "@coinweb/contract-kit": "0.1.10",
+    "@coinweb/testing-sdk": "0.0.7",
+    "@coinweb/minimal-sdk": "1.2.15-dev"
   },
   "devDependencies": {
-    "@coinweb/cweb-tool": "^1.0.34",
+    "@coinweb/cweb-tool": "2.0.17",
+    "@coinweb/minimal-sdk": "1.2.15-dev",
+    "@coinweb/testing-sdk": "0.0.7",
+    "envsub": "^4.1.0",
     "eslint": "^8.57.0",
     "eslint-plugin-import": "^2.29.1",
-    "husky": "^9.0.11",
+    "husky": "^9.1.4",
     "lint-staged": "^15.2.4",
     "prettier": "^3.2.5",
-    "typescript": "^5.4.2"
+    "typescript": "^5.4.2",
+    "yaml": "^2.5.0"
   },
   "dependencies": {
-    "axios": "^1.4.0",
     "js-yaml": "^4.1.0",
+    "valibot": "^0.38.0",
     "write-yaml-file": "^5.0.0"
   },
-  "version": "0.0.0",
+  "version": "0.0.1-stage",
   "description": "",
-  "author": "cwap",
+  "author": "CWAP team",
   "license": "MIT"
 }

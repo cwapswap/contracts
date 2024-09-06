@@ -35,7 +35,10 @@ export const closePosition = selfCallWrapper((context: Context) => {
   const [, positionId, positionData] = getMethodArguments(context) as [
     unknown,
     string,
-    Pick<PositionStateClaimBody, 'baseAmount' | 'createdAt' | 'quoteAmount' | 'recipient' | 'expirationDate'>,
+    Pick<
+      PositionStateClaimBody,
+      'baseAmount' | 'createdAt' | 'quoteAmount' | 'recipient' | 'expirationDate' | 'chainData' | 'txId'
+    >,
   ];
 
   const positionFundsClaim = extractRead(extractContractArgs(tx)[0])?.[0]
@@ -50,11 +53,17 @@ export const closePosition = selfCallWrapper((context: Context) => {
 
   const issuer = constructContractIssuer(getContractId(tx));
 
+  const fundsOwner = positionFunds.owner;
+
+  if (!fundsOwner) {
+    throw new Error('Cannot return funds');
+  }
+
   return [
     constructContinueTx(context, [
       passCwebFrom(issuer, availableCweb),
       constructTake(createPositionFundsKey(positionId)),
-      ...constructSendCweb(BigInt(positionStoredAmount), positionFunds.owner, null),
+      ...constructSendCweb(BigInt(positionStoredAmount), fundsOwner, null),
       constructStore(
         createPositionStateClaim({
           id: positionId,

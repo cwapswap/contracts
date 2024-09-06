@@ -7,7 +7,13 @@ import {
   selfCallWrapper,
 } from '@coinweb/contract-kit';
 
-import { createMakerDepositKey, CreateOrderArguments, MakerDepositClaimBody, toHex } from '../../../offchain/shared';
+import {
+  createMakerDepositKey,
+  CreateOrderArguments,
+  FEE,
+  MakerDepositClaimBody,
+  toHex,
+} from '../../../offchain/shared';
 import { PRIVATE_METHODS } from '../../constants';
 import { ContractOwnerClaimBody, TypedClaim } from '../../types';
 import {
@@ -17,15 +23,25 @@ import {
   getContractIssuer,
   getContractRef,
   getInstanceParameters,
+  getMethodArguments,
   getReadClaimByIndex,
   getUser,
 } from '../../utils';
 import { isEqualUser } from '../../utils/user';
 
-import { SeedOrdersPrivateArguments } from './types';
+import { PrepareSeedPrivateArguments, SeedOrdersPrivateArguments } from './types';
+
+const getRandomInRange = (min: bigint, max: bigint): bigint => {
+  const range = max - min + 1n;
+  const randomOffset = BigInt(Math.floor(Math.random() * Number(range)));
+
+  return min + randomOffset;
+};
 
 export const prepareSeed = selfCallWrapper((context: Context) => {
   const { availableCweb, authInfo } = getCallParameters(context);
+
+  const [minBaseHex, maxBaseHex, minQuoteHex, maxQuoteHex] = getMethodArguments<PrepareSeedPrivateArguments>(context);
 
   const contractOwnerClaim = getReadClaimByIndex<TypedClaim<ContractOwnerClaimBody>>(context)(0);
 
@@ -47,27 +63,35 @@ export const prepareSeed = selfCallWrapper((context: Context) => {
   const orders: CreateOrderArguments[] = [];
 
   let seedFunds = availableCweb - transactionFee;
+  let fundsToDeposit = 0n;
 
   if (seedFunds <= 0n) {
     throw new Error('Not enough funds provided for seed');
   }
 
-  const seedTransactionFee = 50000n;
-  const seedCallFee = 1000n;
+  const seedTransactionFee = 1000n;
 
-  while (seedFunds > seedTransactionFee + seedCallFee + 100n) {
-    seedFunds -= seedTransactionFee + seedCallFee;
+  const minBase = BigInt(minBaseHex);
+  const maxBase = BigInt(maxBaseHex);
+  const minQuote = BigInt(minQuoteHex);
+  const maxQuote = BigInt(maxQuoteHex);
 
-    const suggestedAmount = BigInt(Math.random() * 200 + 100);
+  while (seedFunds > seedTransactionFee + FEE.CREATE_ORDER + minBase) {
+    seedFunds -= seedTransactionFee + FEE.CREATE_ORDER;
+
+    const suggestedAmount = getRandomInRange(minBase, maxBase);
     const baseAmount = seedFunds > suggestedAmount ? suggestedAmount : seedFunds;
 
     seedFunds -= baseAmount;
 
-    const rate = BigInt(Math.random() * 5 + 5);
-    const l1Amount = (baseAmount * rate) / 100n;
+    fundsToDeposit += baseAmount;
+
+    const l1Amount = getRandomInRange(minQuote, maxQuote);
 
     orders.push([toHex(baseAmount), toHex(l1Amount), getUser(context).payload as string]);
   }
+
+  const totalDeposit = storedDeposit + fundsToDeposit + seedFunds;
 
   return [
     constructContinueTx(
@@ -78,7 +102,7 @@ export const prepareSeed = selfCallWrapper((context: Context) => {
         constructStore(
           createMakerDepositClaim({
             user: caller,
-            amount: storedDeposit + seedFunds,
+            amount: totalDeposit,
           }),
         ),
       ],
@@ -91,7 +115,7 @@ export const prepareSeed = selfCallWrapper((context: Context) => {
               methodArgs: orders satisfies SeedOrdersPrivateArguments,
             },
             contractInfo: {
-              providedCweb: availableCweb - transactionFee,
+              providedCweb: availableCweb - transactionFee - totalDeposit,
               authenticated: authInfo,
             },
             contractArgs: [],

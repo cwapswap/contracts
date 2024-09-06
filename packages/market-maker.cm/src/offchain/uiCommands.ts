@@ -38,34 +38,34 @@ const createCallContractCommand = (
   return JSON.stringify({ CustomV1: { calls: [contractCall] } });
 };
 
-export const deposit = ({ contractId, depositAmount, contractOwnerFee }: DepositRequestData) => {
+export const makeDepositUiCommand = ({ contractId, depositAmount }: DepositRequestData) => {
   return createCallContractCommand(
     contractId,
-    PUBLIC_METHODS.CREATE_ORDER,
+    PUBLIC_METHODS.DEPOSIT,
     [toHex(depositAmount)] satisfies DepositArguments,
-    depositAmount + FEE.DEPOSIT + contractOwnerFee,
+    depositAmount + FEE.DEPOSIT,
   );
 };
 
-export const withdraw = ({ contractId, withdrawAmount }: WithdrawRequestData) => {
+export const makeWithdrawUiCommand = ({ contractId, withdrawAmount }: WithdrawRequestData) => {
   return createCallContractCommand(
     contractId,
-    PUBLIC_METHODS.CREATE_ORDER,
+    PUBLIC_METHODS.WITHDRAW,
     [toHex(withdrawAmount)] satisfies WithdrawArguments,
     FEE.WITHDRAW,
   );
 };
 
-export const createOrder = ({ contractId, baseWallet, l1Amount, baseAmount }: CreateOrderRequestData) => {
+export const createOrderUiCommand = ({ contractId, baseWallet, l1Amount, baseAmount }: CreateOrderRequestData) => {
   return createCallContractCommand(
     contractId,
     PUBLIC_METHODS.CREATE_ORDER,
     [toHex(baseAmount), toHex(l1Amount), baseWallet] satisfies CreateOrderArguments,
-    baseAmount + FEE.CREATE_ORDER,
+    FEE.CREATE_ORDER,
   );
 };
 
-export const deleteOrder = ({ contractId, orderId }: CancelOrderRequestData) => {
+export const deleteOrderUiCommand = ({ contractId, orderId }: CancelOrderRequestData) => {
   return createCallContractCommand(
     contractId,
     PUBLIC_METHODS.CANCEL_ORDER,

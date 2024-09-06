@@ -69,8 +69,7 @@ export const handleExecutionBlockTriggered = selfCallWrapper((context: Context) 
       orderState: order,
       providedCweb: availableCweb,
       requestId,
-      sendAmount: request.baseAmount,
-      collateral: request.collateral,
+      requestState: request,
       depositAmount,
       depositOwner: deposit.owner,
     });
@@ -82,15 +81,12 @@ export const handleExecutionBlockTriggered = selfCallWrapper((context: Context) 
     return handleExpiration({
       authInfo,
       context,
-      contractId: request.fallbackContractId,
-      methodName: request.fallbackMethodName,
       providedCweb: availableCweb,
       quoteWallet: request.quoteWallet,
       requestId,
       orderId,
-      collateral: request.collateral,
-      quoteAmount: request.quoteAmount,
       requestFunds: requestFundsClaim.fees_stored,
+      request,
       order,
     });
   }

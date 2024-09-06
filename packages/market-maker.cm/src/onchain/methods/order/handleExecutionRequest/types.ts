@@ -1,13 +1,24 @@
-import { HexBigInt, RequestStateClaimBody } from '../../../../offchain/shared';
+import { HexBigInt, OrderStateClaimBody, RequestStateClaimBody } from '../../../../offchain/shared';
+
+export type InitialRequestData = Omit<RequestStateClaimBody, 'collateral' | 'requestedOrderId' | 'quoteAmount'>;
 
 export type PrepareRequestPrivateArguments = [
-  baseAmount: HexBigInt,
-  quoteWallet: string,
+  id: string,
+  initialRequestData: InitialRequestData,
+  quoteAmount: HexBigInt,
+];
+
+export type CreateRequestPrivateArguments = [
+  id: string,
+  initialRequestData: InitialRequestData,
+  quoteAmount: HexBigInt,
   orderId: string,
+  orderState: OrderStateClaimBody,
+];
+
+export type HandleExecutionRequestArguments = [
+  quoteAmount: HexBigInt,
+  quoteWallet: string,
   fallbackContractId: string,
   fallbackMethodName: string,
 ];
-
-export type PreparedRequest = Omit<RequestStateClaimBody, 'collateral'>;
-
-export type CreateRequestPrivateArguments = [id: string, preparedRequest: PreparedRequest];

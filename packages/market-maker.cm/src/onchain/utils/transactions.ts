@@ -1,17 +1,4 @@
-import {
-  DEFAULT_HANDLER_NAME,
-  NewTxContinue,
-  NewTxJump,
-  PreparedOperation,
-  constructContractRef,
-  ecdsaContract,
-  getContextSystem,
-} from '@coinweb/contract-kit';
-
-import { CONSTANTS } from '../constants';
-
-import { getInstanceParameters } from './context';
-import { createL1ExecuteEventBlockFilter } from './filters';
+import { NewTxContinue, NewTxJump, PreparedOperation, ecdsaContract } from '@coinweb/contract-kit';
 
 export const { constructSendCweb } = ecdsaContract();
 
@@ -50,34 +37,3 @@ export const constructConditional = ((condition, ops, altOps = [] as unknown) =>
 
   return [ops];
 }) as ConstructConditional;
-
-export const constructJumpCall = (eventNonce: bigint, requestId: string, providedCweb: bigint) => {
-  const { shard: currentShard } = getContextSystem();
-  const { shard: eventShard } = getInstanceParameters();
-
-  if (currentShard === eventShard) {
-    return [];
-  }
-
-  return [
-    {
-      callInfo: {
-        ref: constructContractRef(
-          {
-            FromSmartContract: CONSTANTS.JUMP_CONTRACT_ID,
-          },
-          [],
-        ),
-        methodInfo: {
-          methodName: DEFAULT_HANDLER_NAME,
-          methodArgs: [eventShard, [createL1ExecuteEventBlockFilter(requestId, eventNonce)]],
-        },
-        contractInfo: {
-          providedCweb,
-          authenticated: null,
-        },
-        contractArgs: [],
-      },
-    },
-  ];
-};

@@ -1,14 +1,15 @@
-import { BlockFilter, ContractIssuer } from '@coinweb/contract-kit';
+import { BlockFilter, ClaimKey, ContractIssuer } from '@coinweb/contract-kit';
 
 import { createClosedIndexKey } from '../../offchain/shared';
+import { CONSTANTS } from '../constants';
 
-import { createExpirationPositionClaimKey, createL1AcceptEventClaimKey } from './claims';
+import { createExpirationPositionClaimKey } from './claims';
 
 export const createExpirationPositionBlockFilter = (expirationDate: number): BlockFilter => {
   const { first_part: first, second_part: second } = createExpirationPositionClaimKey(expirationDate);
 
   return {
-    issuer: 'L2BlockInfoProvider',
+    issuer: CONSTANTS.BLOCK_HEIGHT_INFO_PROVIDER,
     first,
     second,
   };
@@ -24,11 +25,11 @@ export const createClosedPositionBlockFilter = (issuer: ContractIssuer, position
   };
 };
 
-export const createL1AcceptEventBlockFilter = (positionId: string, nonce: bigint): BlockFilter => {
-  const { first_part: first, second_part: second } = createL1AcceptEventClaimKey(positionId, nonce);
+export const createL1AcceptEventBlockFilter = (claimKey: ClaimKey): BlockFilter => {
+  const { first_part: first, second_part: second } = claimKey;
 
   return {
-    issuer: 'L2BlockInfoProvider',
+    issuer: CONSTANTS.L1_EVENT_INFO_PROVIDER,
     first,
     second,
   };

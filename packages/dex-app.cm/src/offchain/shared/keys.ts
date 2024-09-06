@@ -9,9 +9,11 @@ export const createPositionFundsFirstPart = () => [Key.FUNDS];
 
 export const createDateIndexFirstPart = () => [Key.DATE_INDEX];
 
-export const createBestPositionIndexFirstPart = () => [Key.BEST_INDEX];
+export const createBestByQuoteIndexFirstPart = () => [Key.BEST_BY_QUOTE_INDEX];
 
 export const createActivePositionIndexFirstPart = () => [Key.ACTIVE_INDEX];
+
+export const createBestByQuoteActiveIndexFirstPart = () => [Key.BEST_BY_QUOTE_INDEX, Key.ACTIVE_INDEX];
 
 export const createUserIndexFirstPart = (pubKey: PubKey) => [Key.USER_INDEX, pubKey];
 
@@ -37,9 +39,9 @@ export const createDateIndexKey = (timestamp: number, positionId: string) =>
     second_part: [Number.MAX_SAFE_INTEGER - timestamp, positionId],
   }) satisfies ClaimKey;
 
-export const createBestPositionIndexKey = (rate: bigint, positionId: string) =>
+export const createBestByQuoteIndexKey = (rate: bigint, positionId: string) =>
   ({
-    first_part: createBestPositionIndexFirstPart(),
+    first_part: createBestByQuoteIndexFirstPart(),
     second_part: [rate.toString(16), positionId],
   }) satisfies ClaimKey;
 
@@ -47,6 +49,12 @@ export const createActivePositionIndexKey = (timestamp: number, positionId: stri
   ({
     first_part: createActivePositionIndexFirstPart(),
     second_part: [Number.MAX_SAFE_INTEGER - timestamp, positionId],
+  }) satisfies ClaimKey;
+
+export const createBestByQuoteActiveIndexKey = (rate: bigint, positionId: string) =>
+  ({
+    first_part: createBestByQuoteActiveIndexFirstPart(),
+    second_part: [rate.toString(16), positionId],
   }) satisfies ClaimKey;
 
 export const createUserIndexKey = (pubKey: PubKey, timestamp: number, positionId: string) =>

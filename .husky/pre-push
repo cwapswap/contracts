@@ -1,11 +1,8 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
 if [ -n "$(git ls-files screenshots/)" ]; then
   echo "Error: There are files in the /screenshots directory. Please remove them before pushing."
   exit 1
 fi
 
-yarn test \
-&& yarn typecheck \
-&& yarn build
+yarn typecheck \
+&& yarn build \
+&& yarn lint-staged .

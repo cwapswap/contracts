@@ -1,51 +1,41 @@
-import { constructContinueTx, constructRead, Context } from '@coinweb/contract-kit';
+import { Context } from '@coinweb/contract-kit';
 
-import { HandleExecutionRequestArguments, FEE, createOrderStateKey } from '../../../../offchain/shared';
-import { PRIVATE_METHODS } from '../../../constants';
-import { getCallParameters, getContractIssuer, getContractRef, getMethodArguments } from '../../../utils';
+import { FEE, REQUEST_EXECUTION_STATUS, toHex } from '../../../../offchain/shared';
+import { CONSTANTS } from '../../../constants';
+import { getCallParameters, getMethodArguments, getTime, hashObject } from '../../../utils';
 
-import { PrepareRequestPrivateArguments } from './types';
+import { HandleExecutionRequestArguments, InitialRequestData } from './types';
+import { constructPrepareRequest } from './utils';
 
 export const handleExecutionRequestPublic = (context: Context) => {
   const { authInfo, availableCweb } = getCallParameters(context);
 
-  const [baseAmount, quoteWallet, orderId, fallbackContractId, fallbackMethodName] =
+  const [quoteAmount, quoteWallet, fallbackContractId, fallbackMethodName] =
     getMethodArguments<HandleExecutionRequestArguments>(context);
 
-  if (availableCweb < BigInt(baseAmount) + FEE.HANDLE_EXECUTION_REQUEST) {
-    throw new Error('Insufficient cweb provided'); //TODO! Return a rest of cweb;
-  }
+  const createdAt = getTime();
 
-  const issuer = getContractIssuer(context);
+  const baseAmount = availableCweb - FEE.HANDLE_EXECUTION_REQUEST;
 
-  const transactionFee = 2000n;
+  const initialRequestData = {
+    baseAmount: toHex(baseAmount),
+    createdAt,
+    expirationDate: createdAt + CONSTANTS.REQUEST_LIFE_TIME,
+    quoteWallet,
+    executionStatus: REQUEST_EXECUTION_STATUS.PENDING,
+    fallbackContractId,
+    fallbackMethodName,
+    txId: context.call.txid,
+  } satisfies InitialRequestData;
 
-  return [
-    constructContinueTx(
-      context,
-      [],
-      [
-        {
-          callInfo: {
-            ref: getContractRef(context),
-            methodInfo: {
-              methodName: PRIVATE_METHODS.PREPARE_EXECUTION_REQUEST,
-              methodArgs: [
-                baseAmount,
-                quoteWallet,
-                orderId,
-                fallbackContractId,
-                fallbackMethodName,
-              ] satisfies PrepareRequestPrivateArguments,
-            },
-            contractInfo: {
-              providedCweb: availableCweb - transactionFee,
-              authenticated: authInfo,
-            },
-            contractArgs: [constructRead(issuer, createOrderStateKey(orderId))],
-          },
-        },
-      ],
-    ),
-  ];
+  const id = hashObject(initialRequestData);
+
+  return constructPrepareRequest({
+    context,
+    authInfo,
+    availableCweb,
+    id,
+    initialRequestData,
+    quoteAmount,
+  });
 };

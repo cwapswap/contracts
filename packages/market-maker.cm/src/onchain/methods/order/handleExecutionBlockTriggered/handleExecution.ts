@@ -10,10 +10,15 @@ import {
 
 import {
   createMakerDepositKey,
+  createPendingOrderByOwnerIndexKey,
+  createRequestByMarketMakerIndexKey,
+  createRequestByOrderIndexKey,
   createRequestFundsKey,
   HexBigInt,
   ORDER_ACTIVITY_STATUS,
   OrderStateClaimBody,
+  REQUEST_EXECUTION_STATUS,
+  RequestStateClaimBody,
 } from '../../../../offchain/shared';
 import {
   constructConditional,
@@ -22,6 +27,8 @@ import {
   createOrderActiveIndexClaim,
   createOrderStateClaim,
   createMakerDepositClaim,
+  createBestActiveOrderIndexClaim,
+  createRequestStateClaim,
 } from '../../../utils';
 
 export const handleExecution = ({
@@ -30,9 +37,8 @@ export const handleExecution = ({
   context,
   issuer,
   providedCweb,
-  sendAmount,
   orderState,
-  collateral,
+  requestState,
   depositAmount,
   depositOwner,
 }: {
@@ -41,9 +47,8 @@ export const handleExecution = ({
   context: Context;
   issuer: ContractIssuer;
   providedCweb: bigint;
-  sendAmount: HexBigInt;
   orderState: OrderStateClaimBody;
-  collateral: HexBigInt;
+  requestState: RequestStateClaimBody;
   depositAmount: HexBigInt;
   depositOwner: User;
 }) => {
@@ -53,24 +58,59 @@ export const handleExecution = ({
     constructContinueTx(context, [
       passCwebFrom(issuer, providedCweb),
       constructTake(createRequestFundsKey(requestId)),
-      ...constructSendCweb(BigInt(sendAmount), orderState.baseWallet, null),
+      ...constructSendCweb(BigInt(requestState.baseAmount), orderState.baseWallet, null),
       constructTake(createMakerDepositKey(depositOwner)),
+      constructTake(createPendingOrderByOwnerIndexKey(orderState.owner, requestState.createdAt, orderId)),
+      constructTake(createRequestByMarketMakerIndexKey(orderState.owner, requestState.createdAt, requestId)),
+      constructTake(createRequestByOrderIndexKey(orderId, requestState.createdAt, requestId)),
       constructStore(
-        createMakerDepositClaim({ amount: BigInt(depositAmount) + BigInt(collateral), user: depositOwner }),
-      ),
-      constructStore(
-        createOrderStateClaim({
+        createRequestStateClaim({
           id: orderId,
           body: {
-            ...orderState,
-            activityStatus: isOrderCompleted ? ORDER_ACTIVITY_STATUS.COMPLETED : ORDER_ACTIVITY_STATUS.ACTIVE,
+            ...requestState,
+            executionStatus: REQUEST_EXECUTION_STATUS.EXECUTED,
           },
+        }),
+      ),
+      constructStore(
+        createMakerDepositClaim({
+          amount: BigInt(depositAmount) + BigInt(requestState.collateral),
+          user: depositOwner,
         }),
       ),
       ...constructConditional(
         isOrderCompleted,
-        constructStore(createClosedOrderIndexClaim({ id: orderId })),
-        constructStore(createOrderActiveIndexClaim({ timestamp: orderState.createdAt, id: orderId })),
+        [
+          constructStore(createClosedOrderIndexClaim({ id: orderId })),
+          constructStore(
+            createOrderStateClaim({
+              id: orderId,
+              body: {
+                ...orderState,
+                activityStatus: ORDER_ACTIVITY_STATUS.COMPLETED,
+              },
+            }),
+          ),
+        ],
+        [
+          constructStore(
+            createOrderStateClaim({
+              id: orderId,
+              body: {
+                ...orderState,
+                activityStatus: ORDER_ACTIVITY_STATUS.ACTIVE,
+              },
+            }),
+          ),
+          constructStore(createOrderActiveIndexClaim({ timestamp: orderState.createdAt, id: orderId })),
+          constructStore(
+            createBestActiveOrderIndexClaim({
+              id: orderId,
+              baseAmount: orderState.baseAmount,
+              quoteAmount: orderState.l1Amount,
+            }),
+          ),
+        ],
       ),
     ]),
   ];

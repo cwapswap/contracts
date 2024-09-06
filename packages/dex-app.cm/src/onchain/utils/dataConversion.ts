@@ -1,8 +1,20 @@
-import { uint8ToHex } from '@coinweb/contract-kit';
+import { hexToUint8, uint8ToHex } from '@coinweb/contract-kit';
 import { blake3 } from '@noble/hashes/blake3';
+import { sha256 } from '@noble/hashes/sha256';
+import { binary_to_base58 as binToBase58 } from 'base58-js';
 
-import { HexBigInt, decodeData, PositionStateClaimBody } from '../../offchain/shared';
-import { L1EventData } from '../types';
+import {
+  parseL1TxData,
+  HexBigInt,
+  PositionStateClaimBody,
+  toHex,
+  L1TxDataForAccept,
+  L1TxDataForTransfer,
+} from '../../offchain/shared';
+import { L1EventData, L1Types, Logs } from '../types';
+
+import { getInstanceParameters } from './contract';
+import { log } from './logger';
 
 export const hashClaimBody = (args: PositionStateClaimBody, nonce?: string) => {
   let argsString = Object.entries(args)
@@ -62,7 +74,36 @@ const base64ToHex = (textData: string) => {
     .join('');
 };
 
-export const parseL1EventData = (data: string): L1EventData => {
+const getEvmEventData = (body: unknown) => {
+  if (body && typeof body === 'object' && 'data' in body) {
+    if (typeof body.data === 'string') {
+      return body.data;
+    }
+  }
+};
+
+const btcOutputToAddress = (hex: string) => {
+  const addressPrefix = getInstanceParameters(L1Types.Btc).address_prefix;
+  let tmp = hex;
+
+  tmp = `${addressPrefix}${tmp}`;
+  const hex1 = hexToUint8(tmp);
+  const text1 = sha256(hex1);
+  const text2 = sha256(text1);
+  const address: string = tmp + uint8ToHex(text2).slice(2, 10);
+  const hex3 = hexToUint8(address);
+  const str = binToBase58(hex3);
+
+  return str;
+};
+
+export const parseEvmEventClaimBody = (body: unknown): L1EventData => {
+  const data = getEvmEventData(body);
+
+  if (!data) {
+    throw new Error('Invalid L1 event data');
+  }
+
   const dataHex = base64ToHex(data);
 
   /*
@@ -72,21 +113,108 @@ export const parseL1EventData = (data: string): L1EventData => {
   value of the parameter followed by the parameter value encoded on one or 
   more words.
   */
-  const payload = decodeData(`0x${dataHex.slice(128 + 128)}`); // ^^^
-
-  const callContractData = payload[1] && {
-    l2Contract: payload[1][0] as string,
-    l2MethodName: payload[1][1] as string,
-    transferQuoteAmount: payload[1][2] as HexBigInt,
-    l1RecipientAddress: payload[1][3] as string,
-    contractOwnerFee: BigInt(payload[1][4]),
-    callFee: BigInt(payload[1][5]),
-  };
+  const l1TxData = parseL1TxData(dataHex.slice(128 + 128)) as L1TxDataForAccept | L1TxDataForTransfer; // ^^^
 
   return {
     recipient: `0x${dataHex.slice(24, 64)}`,
     paidAmount: `0x${dataHex.slice(64, 128)}`,
-    cwebAddress: payload[0][0].slice(2),
-    callContractData,
+    ...l1TxData,
   };
+};
+
+const getBtcEventData = (body: unknown) => {
+  log('log', 1);
+  console.log('console.log', 1);
+
+  type BtcVout = {
+    scriptPubKey: {
+      asm: string;
+    };
+  };
+  const BTC_TEXT = 'OP_RETURN ';
+  const BTC_TEXT_WALLET_START = 'OP_HASH160 ';
+  const BTC_TEXT_WALLET_END = ' OP_EQUAL';
+
+  if (body && typeof body === 'object' && 'UtxoBased' in body) {
+    if (body.UtxoBased && typeof body.UtxoBased === 'object' && 'vout' in body.UtxoBased) {
+      if (Array.isArray(body.UtxoBased.vout)) {
+        const dataArray = body.UtxoBased.vout.filter(
+          (item): item is BtcVout =>
+            item &&
+            typeof item === 'object' &&
+            item.scriptPubKey &&
+            typeof item.scriptPubKey === 'object' &&
+            typeof item.scriptPubKey.asm === 'string' &&
+            item.scriptPubKey.asm.startsWith(BTC_TEXT),
+        );
+        let data = '';
+        let valueBtc: number;
+        let walletBtc = '';
+        const vout = body.UtxoBased.vout[body.UtxoBased.vout.length - 2];
+
+        if (vout.scriptPubKey.asm.startsWith(BTC_TEXT)) {
+          valueBtc = Number(body.UtxoBased.vout[body.UtxoBased.vout.length - 1].value) * 1e8;
+          const outputHash = body.UtxoBased.vout[body.UtxoBased.vout.length - 1].scriptPubKey.asm
+            .replace(BTC_TEXT_WALLET_START, '')
+            .replace(BTC_TEXT_WALLET_END, '');
+
+          console.log(Logs.Custom, `Hash btc script (1): ${outputHash}`);
+          walletBtc = btcOutputToAddress(outputHash);
+        } else {
+          valueBtc = Number(vout.value) * 1e8;
+          const outputHash = body.UtxoBased.vout[body.UtxoBased.vout.length - 1].scriptPubKey.asm
+            .replace(BTC_TEXT_WALLET_START, '')
+            .replace(BTC_TEXT_WALLET_END, '');
+
+          console.log(Logs.Custom, `Hash btc script (2): ${outputHash}`);
+          walletBtc = btcOutputToAddress(outputHash);
+        }
+
+        for (let i = 0; i < dataArray.length; i += 1) {
+          data = data + dataArray[i]?.scriptPubKey.asm.replace(BTC_TEXT, '');
+        }
+
+        const returnData = {
+          data,
+          value: toHex(BigInt(Math.trunc(valueBtc))),
+          wallet: walletBtc,
+        };
+
+        log(Logs.Custom, 'Btc Tx data:');
+        log(Logs.Custom, returnData);
+
+        return returnData;
+      }
+    }
+  }
+};
+
+export const parseBtcEventClaimBody = (body: unknown): L1EventData => {
+  const data = getBtcEventData(body);
+
+  if (!data) {
+    throw new Error('Invalid L1 event data');
+  }
+
+  const l1TxData = parseL1TxData(data.data) as L1TxDataForAccept | L1TxDataForTransfer;
+
+  log('l1TxData', l1TxData);
+
+  return {
+    recipient: data.wallet as HexBigInt,
+    paidAmount: data.value,
+    ...l1TxData,
+  };
+};
+
+export const parseL1EventClaimBody = (body: unknown): L1EventData => {
+  if (getInstanceParameters().l1_type === L1Types.Btc) {
+    return parseBtcEventClaimBody(body);
+  } else {
+    return parseEvmEventClaimBody(body);
+  }
+};
+
+export const createBestByQuoteIndex = (base: HexBigInt | bigint, quote: HexBigInt | bigint) => {
+  return BigInt(Number(base) * 1e18) / BigInt(quote); //TODO! Check this approach
 };

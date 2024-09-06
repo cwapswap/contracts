@@ -14,11 +14,17 @@ import {
   PositionFundsClaimBody,
   PositionStateClaimBody,
   createActivePositionIndexKey,
+  createBestByQuoteActiveIndexKey,
   createPositionFundsKey,
   toHex,
 } from '../../../../offchain/shared';
 import { TypedClaim } from '../../../types';
-import { constructSendCweb, createClosedIndexClaim, createPositionStateClaim } from '../../../utils';
+import {
+  constructSendCweb,
+  createClosedIndexClaim,
+  createPositionStateClaim,
+  createBestByQuoteIndex,
+} from '../../../utils';
 
 export const handleExpiration = (
   context: Context,
@@ -31,11 +37,17 @@ export const handleExpiration = (
   const positionStoredAmount = positionFundsClaim.fees_stored as HexBigInt;
   const positionFunds = positionFundsClaim.body;
 
+  const fundsOwner = positionFunds.owner;
+
+  if (!fundsOwner) {
+    throw new Error('Cannot return funds');
+  }
+
   return [
     constructContinueTx(context, [
       passCwebFrom(issuer, availableCweb),
       constructTake(createPositionFundsKey(positionId)),
-      ...constructSendCweb(BigInt(positionStoredAmount), positionFunds.owner, null),
+      ...constructSendCweb(BigInt(positionStoredAmount), fundsOwner, null),
       constructStore(
         createPositionStateClaim({
           id: positionId,
@@ -48,6 +60,12 @@ export const handleExpiration = (
         }),
       ),
       constructTake(createActivePositionIndexKey(positionState.createdAt, positionId)),
+      constructTake(
+        createBestByQuoteActiveIndexKey(
+          createBestByQuoteIndex(positionState.baseAmount, positionState.quoteAmount),
+          positionId,
+        ),
+      ),
       constructStore(createClosedIndexClaim({ positionId })),
     ]),
   ];

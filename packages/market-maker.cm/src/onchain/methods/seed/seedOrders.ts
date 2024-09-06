@@ -26,7 +26,7 @@ export const seedOrders = selfCallWrapper((context: Context) => {
             methodArgs: order satisfies CreateOrderArguments,
           },
           contractInfo: {
-            providedCweb: BigInt(order[0]) + seedTransactionFee,
+            providedCweb: seedTransactionFee,
             authenticated: authInfo,
           },
           contractArgs: [],

@@ -1,5 +1,6 @@
 import type { GqlIssuedClaim } from '@coinweb/wallet-lib';
 
+import { BtcChainData, ChainData } from './shared';
 import { ACTIVITY_STATUS, PAYMENT_STATUS } from './shared/constants';
 
 export type CreatePositionRequestData = {
@@ -8,7 +9,11 @@ export type CreatePositionRequestData = {
   quoteAmount: string;
   recipient: string;
   contractOwnerFee: string;
+  chainData?: ChainData;
 };
+
+export type CreatePositionBtcRequestData = Omit<CreatePositionRequestData, 'chainData'> & { chainData: BtcChainData };
+export type CreatePositionEvmRequestData = Omit<CreatePositionRequestData, 'chainData'>;
 
 export type CancelPositionRequestData = {
   contractId: string;
@@ -38,6 +43,8 @@ export type PositionData = {
   paymentStatus: PAYMENT_STATUS;
   funds: bigint;
   createdAt: number;
+  chainData?: ChainData;
+  txId: string;
 };
 
 export type Client = {

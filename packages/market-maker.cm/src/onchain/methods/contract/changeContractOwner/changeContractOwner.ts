@@ -5,14 +5,13 @@ import {
   constructStore,
   extractContractArgs,
   extractRead,
-  extractUser,
-  getAuthenticated,
   getMethodArguments,
   getParameters,
   selfCallWrapper,
 } from '@coinweb/contract-kit';
 
 import { InstanceParameters, ContractOwnerClaimBody } from '../../../types';
+import { getUser } from '../../../utils';
 import { createContractOwnerClaim } from '../../../utils/claims';
 import { isEqualUser } from '../../../utils/user';
 
@@ -25,7 +24,7 @@ export const changeContractOwner = selfCallWrapper((context: Context) => {
 
   const currentOwner = ownerClaim?.owner || (getParameters('contract/parameters.json') as InstanceParameters).owner;
 
-  const signer = extractUser(getAuthenticated(tx));
+  const signer = getUser(context);
 
   if (!isEqualUser(currentOwner, signer)) {
     throw new Error('Operation not permitted');

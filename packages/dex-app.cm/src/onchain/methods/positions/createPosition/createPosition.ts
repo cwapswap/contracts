@@ -1,34 +1,38 @@
-import type { Context } from '@coinweb/contract-kit';
+import type { ClaimKey, Context } from '@coinweb/contract-kit';
 import {
   getContractId,
   constructContinueTx,
   constructContractIssuer,
   getMethodArguments,
   extractContractInfo,
-  getParameters,
   extractContractArgs,
   extractRead,
   passCwebFrom,
   constructStore,
   selfCallWrapper,
+  constructClaimKey,
 } from '@coinweb/contract-kit';
 
 import { PositionStateClaimBody } from '../../../../offchain/shared';
 import { PRIVATE_METHODS } from '../../../constants';
-import { ContractConfig, OwnerClaimBody } from '../../../types';
+import { L1Types, OwnerClaimBody } from '../../../types';
 import {
   constructConditional,
   constructSendCweb,
   createActiveIndexClaim,
-  createBestPositionIndexClaim,
+  createBestByQuoteIndexClaim,
   createCallWithL1EventBlock,
-  createCheckPositionCall,
+  createCreatePositionCallPrivate,
   createDateIndexClaim,
   createFundsClaim,
-  createOwnerClaim,
   createPositionStateClaim,
   createUserIndexClaim,
   hashClaimBody,
+  constructJumpCall,
+  createBestByQuoteActiveIndexClaim,
+  getInstanceParameters,
+  validateBtcChainData,
+  createEvmEventClaimKey,
 } from '../../../utils';
 
 export const createPosition = selfCallWrapper((context: Context) => {
@@ -45,7 +49,7 @@ export const createPosition = selfCallWrapper((context: Context) => {
     unknown,
     string,
     PositionStateClaimBody,
-    string,
+    string | undefined,
     string,
   ];
 
@@ -58,7 +62,7 @@ export const createPosition = selfCallWrapper((context: Context) => {
 
     const transactionFee = 1000n;
 
-    return createCheckPositionCall(
+    return createCreatePositionCallPrivate(
       context,
       issuer,
       positionNewId,
@@ -71,81 +75,104 @@ export const createPosition = selfCallWrapper((context: Context) => {
   const contractOwnerClaim = extractRead(contractArgs[1])?.[0]?.content;
 
   const contractOwner =
-    (contractOwnerClaim?.body as OwnerClaimBody | undefined)?.owner ||
-    (getParameters('contract/parameters.json') as ContractConfig).owner;
+    (contractOwnerClaim?.body as OwnerClaimBody | undefined)?.owner || getInstanceParameters().owner;
+
+  let eventClaimKey: ClaimKey;
+  let eventNonce: null | bigint;
+
+  if (getInstanceParameters().l1_type === L1Types.Btc) {
+    if (!validateBtcChainData(positionState.chainData)) {
+      throw new Error('Invalid input data');
+    }
+
+    eventClaimKey = constructClaimKey(positionState.chainData.l1TxId, positionState.chainData.vout);
+    eventNonce = null;
+  } else {
+    eventNonce = 0n;
+    eventClaimKey = createEvmEventClaimKey(positionId, eventNonce);
+  }
 
   const baseAmount = BigInt(positionState.baseAmount);
   const quoteAmount = BigInt(positionState.quoteAmount);
-  const firstTransactionFee = 2700n + baseAmount + BigInt(ownerFee);
+  const jumpContractFee = 2000n;
+  const firstTransactionFee = 2700n + baseAmount + BigInt(ownerFee) + jumpContractFee;
 
   const secondTransactionFee = 1200n;
 
   return [
-    constructContinueTx(context, [
-      passCwebFrom(issuer, firstTransactionFee),
-      constructStore(
-        createPositionStateClaim({
-          id: positionId,
-          body: positionState,
-        }),
-      ),
-      constructStore(
-        createFundsClaim({
-          positionId,
-          owner: signer,
-          baseAmount: positionState.baseAmount,
-          quoteAmount: positionState.quoteAmount,
-          amount: baseAmount,
-        }),
-      ),
-      constructStore(
-        createActiveIndexClaim({
-          timestamp: positionState.createdAt,
-          positionId,
-        }),
-      ),
-      constructStore(
-        createDateIndexClaim({
-          timestamp: positionState.createdAt,
-          positionId,
-        }),
-      ),
-      constructStore(
-        createBestPositionIndexClaim({
-          baseAmount,
-          quoteAmount,
-          positionId,
-        }),
-      ),
-      constructStore(
-        createUserIndexClaim({
-          pubKey: signer,
-          timestamp: positionState.createdAt,
-          positionId,
-        }),
-      ),
-      ...constructConditional(
-        !contractOwnerClaim,
+    constructContinueTx(
+      context,
+      [
+        passCwebFrom(issuer, firstTransactionFee),
         constructStore(
-          createOwnerClaim({
-            owner: contractOwner,
+          createPositionStateClaim({
+            id: positionId,
+            body: positionState,
           }),
         ),
-      ),
-      ...constructSendCweb(BigInt(ownerFee), contractOwner, null),
-    ]),
+        constructStore(
+          createFundsClaim({
+            positionId,
+            owner: signer,
+            baseAmount: positionState.baseAmount,
+            quoteAmount: positionState.quoteAmount,
+            amount: baseAmount,
+          }),
+        ),
+        constructStore(
+          createActiveIndexClaim({
+            timestamp: positionState.createdAt,
+            positionId,
+          }),
+        ),
+        constructStore(
+          createBestByQuoteActiveIndexClaim({
+            baseAmount,
+            quoteAmount,
+            positionId,
+          }),
+        ),
+        constructStore(
+          createDateIndexClaim({
+            timestamp: positionState.createdAt,
+            positionId,
+          }),
+        ),
+        constructStore(
+          createBestByQuoteIndexClaim({
+            baseAmount,
+            quoteAmount,
+            positionId,
+          }),
+        ),
+        ...constructConditional(
+          !!signer,
+          constructStore(
+            createUserIndexClaim({
+              pubKey: signer!,
+              timestamp: positionState.createdAt,
+              positionId,
+            }),
+          ),
+        ),
+        ...constructSendCweb(BigInt(ownerFee), contractOwner, null),
+      ],
+      constructJumpCall(eventClaimKey, jumpContractFee),
+    ),
     constructContinueTx(
       context,
       [],
-      createCallWithL1EventBlock(
-        PRIVATE_METHODS.HANDLE_BLOCK_TRIGGERED,
+      createCallWithL1EventBlock({
+        methodName: PRIVATE_METHODS.HANDLE_BLOCK_TRIGGERED,
         issuer,
-        availableCweb - secondTransactionFee - firstTransactionFee,
-        auth,
-        0n,
+        providedCweb: availableCweb - secondTransactionFee - firstTransactionFee,
+        authenticated: auth,
+        eventNonce,
         positionId,
         positionState,
-      ),
+        withExpiration: !!signer,
+        eventClaimKey,
+      }),
     ),
   ];
 });

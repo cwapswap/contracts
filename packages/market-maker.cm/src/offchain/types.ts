@@ -1,6 +1,6 @@
 import { type GqlIssuedClaim } from '@coinweb/wallet-lib';
 
-import { OrderStateClaimBody } from './shared';
+import { OrderStateClaimBody, RequestStateClaimBody } from './shared';
 
 export type Pagination = {
   limit: number;
@@ -18,15 +18,24 @@ export type Client = {
   ): Promise<GqlIssuedClaim[]>;
 };
 
-export type Order = { id: string; baseAmount: bigint; quoteAmount: bigint; collateral: bigint } & Omit<
-  OrderStateClaimBody,
-  'baseAmount' | 'quoteAmount' | 'collateral'
->;
+export type Order = {
+  id: string;
+  baseAmount: bigint;
+  quoteAmount: bigint;
+  collateral: bigint;
+  covering: bigint;
+} & Omit<OrderStateClaimBody, 'baseAmount' | 'quoteAmount' | 'collateral' | 'covering'>;
+
+export type Claim = {
+  id: string;
+  baseAmount: bigint;
+  quoteAmount: bigint;
+  collateral: bigint;
+} & Omit<RequestStateClaimBody, 'baseAmount' | 'quoteAmount' | 'collateral'>;
 
 export type DepositRequestData = {
   contractId: string;
   depositAmount: bigint;
-  contractOwnerFee: bigint;
 };
 
 export type WithdrawRequestData = {

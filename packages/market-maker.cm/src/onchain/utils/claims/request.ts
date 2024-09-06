@@ -1,4 +1,4 @@
-import { Claim, ClaimKey, User, constructClaim } from '@coinweb/contract-kit';
+import { Claim, User, constructClaim } from '@coinweb/contract-kit';
 
 import {
   RequestStateClaimBody,
