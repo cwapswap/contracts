@@ -1,7 +1,6 @@
 import type { GqlIssuedClaim } from '@coinweb/wallet-lib';
 
-import { BtcChainData, ChainData } from './shared';
-import { ACTIVITY_STATUS, PAYMENT_STATUS } from './shared/constants';
+import { BtcChainData, ChainData, PositionStateClaimBody } from './shared';
 
 export type CreatePositionRequestData = {
   contractId: string;
@@ -34,18 +33,15 @@ export type Pagination = {
   offset: number;
 };
 
-export type PositionData = {
+type PositionDataTransformed = {
   id: string;
-  recipient: string;
   baseAmount: bigint;
   quoteAmount: bigint;
-  activityStatus: ACTIVITY_STATUS;
-  paymentStatus: PAYMENT_STATUS;
   funds: bigint;
-  createdAt: number;
   chainData?: ChainData;
-  txId: string;
 };
+
+export type PositionData = PositionDataTransformed & Omit<PositionStateClaimBody, keyof PositionDataTransformed>;
 
 export type Client = {
   fetchClaims<T extends NonNullable<unknown>>(

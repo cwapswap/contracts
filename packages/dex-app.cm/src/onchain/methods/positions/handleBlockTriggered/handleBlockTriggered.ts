@@ -1,4 +1,4 @@
-import type { Context } from '@coinweb/contract-kit';
+import type { Context, User } from '@coinweb/contract-kit';
 import {
   getContractId,
   constructContractIssuer,
@@ -6,16 +6,9 @@ import {
   extractContractInfo,
   extractContractArgs,
   extractRead,
-  selfCallWrapper,
 } from '@coinweb/contract-kit';
 
-import {
-  PositionStateClaimBody,
-  HexBigInt,
-  PositionFundsClaimBody,
-  CallType,
-  PUBLIC_METHODS,
-} from '../../../../offchain/shared';
+import { PositionStateClaimBody, HexBigInt, PositionFundsClaimBody, CallType } from '../../../../offchain/shared';
 import { TypedClaim } from '../../../types';
 import { parseL1EventClaimBody, unwrapEventClaim } from '../../../utils';
 
@@ -24,7 +17,7 @@ import { handleClosed } from './handleClosed';
 import { handleExpiration } from './handleExpiration';
 import { handleTransfer } from './handleTransfer';
 
-export const handleBlockTriggered = selfCallWrapper((context: Context) => {
+export const handleBlockTriggered = (context: Context) => {
   const { tx } = context;
 
   const { providedCweb: availableCweb, authenticated: auth } = extractContractInfo(tx);
@@ -46,6 +39,13 @@ export const handleBlockTriggered = selfCallWrapper((context: Context) => {
 
   const positionStoredAmount = positionFundsClaim?.fees_stored;
 
+  const closedBlockClaim = extractRead(contractArgs[4])?.[0]?.content;
+
+  //TODO: Check this case and then remove "&& !positionStoredAmount". I guess if the position is closed, it have no funds
+  if (closedBlockClaim && !positionStoredAmount) {
+    return handleClosed();
+  }
+
   if (!positionStoredAmount) {
     throw new Error('Position is insolvent now');
   }
@@ -65,6 +65,7 @@ export const handleBlockTriggered = selfCallWrapper((context: Context) => {
   if (eventClaim) {
     const eventData = parseL1EventClaimBody(eventClaim.body);
 
+    // This is the call type we get when someone tries to take the order
     if (eventData.callType === CallType.Transfer) {
       return handleTransfer(
         context,
@@ -81,7 +82,12 @@ export const handleBlockTriggered = selfCallWrapper((context: Context) => {
         {
           l2Contract: eventData.nextContractId,
           l2MethodName: eventData.nextContractMethod,
-          l2Args: [eventData.quoteAmount, eventData.quoteRecipient, selfId, PUBLIC_METHODS.CREATE_POSITION],
+          l2Args: [
+            eventData.quoteAmount,
+            eventData.quoteRecipient,
+            eventData.fallbackContractId,
+            eventData.fallbackContractMethod,
+          ],
         },
       );
     }
@@ -97,7 +103,11 @@ export const handleBlockTriggered = selfCallWrapper((context: Context) => {
       availableCweb,
       auth,
       eventData.paidAmount,
-      eventData.baseRecipient,
+      //TODO! Change event data to support user
+      {
+        auth: 'EcdsaContract',
+        payload: eventData.baseRecipient,
+      } satisfies User,
       eventData.recipient,
     );
   }
@@ -108,11 +118,5 @@ export const handleBlockTriggered = selfCallWrapper((context: Context) => {
     return handleExpiration(context, issuer, positionId, positionState, positionFundsClaim, availableCweb);
   }
 
-  const closedBlockClaim = extractRead(contractArgs[4])?.[0]?.content;
-
-  if (closedBlockClaim) {
-    return handleClosed();
-  }
-
   throw new Error(`An error has occurred while trying to process the position ${positionId}`);
-});
+};

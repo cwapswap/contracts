@@ -1,4 +1,4 @@
-import { Claim, HexString, OrdJson, Shard } from '@coinweb/contract-kit';
+import { Claim, HexString, OrdJson, Shard, User } from '@coinweb/contract-kit';
 
 import { HexBigInt, L1TxDataForAccept, L1TxDataForTransfer } from '../offchain/shared';
 
@@ -44,7 +44,7 @@ export type InstanceParameters = {
   l1_type: L1Types;
   l1_contract_address?: string;
   shard: Shard;
-  owner: string;
+  owner: User;
   logs?: Logs[];
   owner_min_fee?: HexString;
   owner_percentage_fee?: number;
@@ -57,11 +57,10 @@ export type InstanceParametersForEvm = {
 
 export type InstanceParametersForBtc = {
   l1_type: L1Types.Btc;
-  address_prefix: string;
 } & Omit<InstanceParameters, 'l1_type' | 'l1_contract_address'>;
 
 export type OwnerClaimBody = {
-  owner: string;
+  owner: User;
   updatedAt: number;
 };
 

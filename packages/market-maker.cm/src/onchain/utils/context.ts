@@ -8,12 +8,12 @@ import {
   getContractId,
   constructContractRef,
   extractUser,
-  getAuthenticated,
   ResolvedOperation,
   Claim,
   extractRead,
   OrdJson,
   getContextSystem,
+  getQueueAuthenticated,
 } from '@coinweb/contract-kit';
 
 import { InstanceParameters, TypedClaim } from '../types';
@@ -43,7 +43,7 @@ export const getContractIssuer = (context: Context) => constructContractIssuer(g
 
 export const getContractRef = (context: Context) => constructContractRef(getContractIssuer(context), []);
 
-export const getUser = (context: Context) => extractUser(getAuthenticated(context.tx));
+export const getUser = (context: Context) => extractUser(getQueueAuthenticated(context.tx));
 
 let contractArguments: ResolvedOperation[] | null = null;
 

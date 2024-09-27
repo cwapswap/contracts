@@ -1,12 +1,6 @@
-import {
-  ContractCall,
-  constructContractIssuer,
-  constructSingleReadClaim,
-  constructSelfRegisterKey,
-} from '@coinweb/contract-kit';
+import { ContractCall, constructContractIssuer, prepareQueueContractCall } from '@coinweb/contract-kit';
 
 import { FEE, PUBLIC_METHODS } from './shared';
-import { toHex } from './shared/utils';
 import {
   CancelPositionRequestData,
   CreatePositionBtcRequestData,
@@ -21,17 +15,8 @@ const createCallContractCommand = (
   cost: bigint,
   auth: boolean = true,
 ) => {
-  const contractCall: ContractCall = {
-    contract_input: {
-      data: [methodName, ...methodArgs],
-      cost: toHex(cost),
-      authenticated: auth,
-    },
-    contract_ref: {
-      explicit: [],
-      stored: [constructSingleReadClaim(constructContractIssuer(contractId), constructSelfRegisterKey())],
-    },
-  };
+  const issuer = constructContractIssuer(contractId);
+  const contractCall: ContractCall = prepareQueueContractCall(issuer, { methodName, methodArgs }, cost, auth);
 
   return JSON.stringify({ CustomV1: { calls: [contractCall] } });
 };

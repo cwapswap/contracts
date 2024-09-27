@@ -1,9 +1,4 @@
-import {
-  ContractCall,
-  constructContractIssuer,
-  constructSingleReadClaim,
-  constructSelfRegisterKey,
-} from '@coinweb/contract-kit';
+import { ContractCall, constructContractIssuer, prepareQueueContractCall } from '@coinweb/contract-kit';
 
 import {
   CancelOrderArguments,
@@ -23,17 +18,8 @@ const createCallContractCommand = (
   cost: bigint,
   auth: boolean = true,
 ) => {
-  const contractCall: ContractCall = {
-    contract_input: {
-      data: [methodName, ...methodArgs],
-      cost: toHex(cost),
-      authenticated: auth,
-    },
-    contract_ref: {
-      explicit: [],
-      stored: [constructSingleReadClaim(constructContractIssuer(contractId), constructSelfRegisterKey())],
-    },
-  };
+  const issuer = constructContractIssuer(contractId);
+  const contractCall: ContractCall = prepareQueueContractCall(issuer, { methodName, methodArgs }, cost, auth);
 
   return JSON.stringify({ CustomV1: { calls: [contractCall] } });
 };
@@ -56,11 +42,11 @@ export const makeWithdrawUiCommand = ({ contractId, withdrawAmount }: WithdrawRe
   );
 };
 
-export const createOrderUiCommand = ({ contractId, baseWallet, l1Amount, baseAmount }: CreateOrderRequestData) => {
+export const createOrderUiCommand = ({ contractId, baseRecipient, l1Amount, baseAmount }: CreateOrderRequestData) => {
   return createCallContractCommand(
     contractId,
     PUBLIC_METHODS.CREATE_ORDER,
-    [toHex(baseAmount), toHex(l1Amount), baseWallet] satisfies CreateOrderArguments,
+    [toHex(baseAmount), toHex(l1Amount), baseRecipient] satisfies CreateOrderArguments,
     FEE.CREATE_ORDER,
   );
 };

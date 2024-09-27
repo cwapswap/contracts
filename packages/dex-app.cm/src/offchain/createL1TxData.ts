@@ -4,6 +4,9 @@ import { CallType, L1TxDataForAccept, L1TxDataForTransfer } from './shared';
 
 const AMOUNT_BYTE_LENGTH = 16;
 
+const calculateHexLength = (value: HexString) =>
+  (value.slice(0, 2).toLowerCase() === '0x' ? value.slice(2) : value).length;
+
 const hexToUint8Array = (value: HexString): Uint8Array => {
   const hex = value.slice(0, 2).toLowerCase() === '0x' ? value.slice(2) : value;
   const valueByteLength = Math.ceil(hex.length / 2);
@@ -69,29 +72,45 @@ export const createL1TxData = (params: L1TxDataForAccept | L1TxDataForTransfer) 
 
   const results = [
     ...callType,
-    ...numberToOneByteUint8Array(quoteAmount.byteLength),
+    ...numberToOneByteUint8Array(calculateHexLength(quoteAmountHex)),
     ...quoteAmount,
-    ...numberToOneByteUint8Array(quoteRecipient.byteLength),
+    ...numberToOneByteUint8Array(calculateHexLength(params.quoteRecipient)),
     ...quoteRecipient,
   ];
 
   if (params.callType === CallType.Accept) {
     const baseRecipient = hexToUint8Array(params.baseRecipient);
 
-    results.push(...numberToOneByteUint8Array(baseRecipient.byteLength), ...baseRecipient);
+    results.push(...numberToOneByteUint8Array(calculateHexLength(params.baseRecipient)), ...baseRecipient);
   }
 
   if (params.callType === CallType.Transfer) {
     const nextContractId = hexToUint8Array(params.nextContractId);
     const nextContractMethod = hexToUint8Array(params.nextContractMethod);
 
-    results.push(...numberToOneByteUint8Array(nextContractId.byteLength), ...nextContractId, ...nextContractMethod);
+    const fallbackContractId = hexToUint8Array(params.fallbackContractId);
+    const fallbackContractMethod = hexToUint8Array(params.fallbackContractMethod);
+
+    results.push(
+      ...numberToOneByteUint8Array(calculateHexLength(params.nextContractId)),
+      ...nextContractId,
+      ...nextContractMethod,
+      ...numberToOneByteUint8Array(calculateHexLength(params.fallbackContractId)),
+      ...fallbackContractId,
+      ...fallbackContractMethod,
+    );
   }
 
   return new Uint8Array(results);
 };
 
-export const parseL1TxData = <TCallType extends CallType>(hexData: HexString) => {
+type ParseL1TxData<TCallType extends CallType> = TCallType extends CallType.Accept
+    ? L1TxDataForAccept
+    : TCallType extends CallType.Transfer
+      ? L1TxDataForTransfer
+      : L1TxDataForAccept | L1TxDataForTransfer;
+
+export const parseL1TxData = <TCallType extends CallType>(hexData: HexString): ParseL1TxData<TCallType> => {
   const hex = hexData.slice(0, 2).toLowerCase() === '0x' ? hexData : `0x${hexData}`;
 
   const binString = BigInt(hex).toString(2);
@@ -105,16 +124,13 @@ export const parseL1TxData = <TCallType extends CallType>(hexData: HexString) =>
   };
 
   const sliceNextParam = () => {
-    const paramLength = bin8StringToNumber(sliceNext(8));
+    const paramHexLength = bin8StringToNumber(sliceNext(8));
+    const paramBinLength = Math.ceil(paramHexLength / 2);
 
-    return binStringToHex(sliceNext(paramLength * 8));
+    return binStringToHex(sliceNext(paramBinLength * 8)).slice(0, paramHexLength + 2);
   };
 
-  const result = {} as TCallType extends CallType.Accept
-    ? L1TxDataForAccept
-    : TCallType extends CallType.Transfer
-      ? L1TxDataForTransfer
-      : L1TxDataForAccept | L1TxDataForTransfer;
+  const result = {} as ParseL1TxData<TCallType>;
 
   result.callType = bin8StringToNumber(sliceNext(8)) as CallType;
 
@@ -130,6 +146,10 @@ export const parseL1TxData = <TCallType extends CallType>(hexData: HexString) =>
     result.nextContractId = sliceNextParam();
 
     result.nextContractMethod = binStringToHex(sliceNext(8));
+
+    result.fallbackContractId = sliceNextParam();
+
+    result.fallbackContractMethod = binStringToHex(sliceNext(8));
   }
 
   return result;

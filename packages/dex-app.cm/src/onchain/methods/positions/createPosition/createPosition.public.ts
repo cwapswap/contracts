@@ -1,11 +1,5 @@
-import type { Context } from '@coinweb/contract-kit';
-import {
-  getContractId,
-  constructContractIssuer,
-  getMethodArguments,
-  extractContractInfo,
-  extractUser,
-} from '@coinweb/contract-kit';
+import type { Claim, Context } from '@coinweb/contract-kit';
+import { getContractId, constructContractIssuer, getMethodArguments, extractContractInfo } from '@coinweb/contract-kit';
 
 import {
   PositionStateClaimBody,
@@ -17,7 +11,15 @@ import {
   ChainData,
 } from '../../../../offchain/shared';
 import { CONSTANTS } from '../../../constants';
-import { createCreatePositionCallPrivate, getInstanceParameters, getTime, hashClaimBody } from '../../../utils';
+import { L1Types } from '../../../types';
+import {
+  createBtcUtxoUniquenessClaim,
+  createCreatePositionCallPrivate,
+  getInstanceParameters,
+  getTime,
+  hashClaimBody,
+  validateBtcChainData,
+} from '../../../utils';
 
 export const createPositionPublic = (context: Context) => {
   const { tx } = context;
@@ -47,7 +49,9 @@ export const createPositionPublic = (context: Context) => {
     positionAmount = availableCweb - callFee - ownerFee;
   }
 
-  const signer = extractUser(auth).payload as string | undefined;
+  if (positionAmount <= 0n) {
+    throw new Error('Not enough funds to create position');
+  }
 
   const createdAt = getTime();
 
@@ -62,9 +66,25 @@ export const createPositionPublic = (context: Context) => {
     expirationDate: createdAt + CONSTANTS.POSITION_LIFE_TIME,
     chainData,
     txId: context.call.txid,
+    error: null,
   };
 
   const positionId = hashClaimBody(positionState);
+
+  let uniqueness: null | Claim;
+
+  if (getInstanceParameters().l1_type === L1Types.Btc) {
+    if (!validateBtcChainData(positionState.chainData)) {
+      throw new Error('Invalid input data');
+    }
+
+    uniqueness = createBtcUtxoUniquenessClaim({
+      data: positionState.chainData,
+      message: 'UTXO is already in use',
+    });
+  } else {
+    uniqueness = null;
+  }
 
   const issuer = constructContractIssuer(getContractId(tx));
 
@@ -72,8 +92,9 @@ export const createPositionPublic = (context: Context) => {
     context,
     issuer,
     positionId,
-    [positionId, positionState, signer, toHex(ownerFee)],
+    [positionId, positionState, toHex(ownerFee), uniqueness],
     availableCweb,
     auth,
+    uniqueness,
   );
 };

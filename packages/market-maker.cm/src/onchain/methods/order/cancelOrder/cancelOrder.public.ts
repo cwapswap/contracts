@@ -1,4 +1,4 @@
-import { Context, constructContinueTx, constructRead } from '@coinweb/contract-kit';
+import { Context, addContinuation, constructRead } from '@coinweb/contract-kit';
 
 import {
   FEE,
@@ -24,32 +24,27 @@ export const cancelOrderPublic = (context: Context) => {
 
   const issuer = getContractIssuer(context);
 
-  const transactionFee = 1000n;
+  const transactionFee = 1100n;
+  const callInfo = {
+    ref: getContractRef(context),
+    methodInfo: {
+      methodName: PRIVATE_METHODS.CLOSE_ORDER,
+      methodArgs: [id, ORDER_ACTIVITY_STATUS.CANCELLED] satisfies DeactivateOrderPrivateArguments,
+    },
+    contractInfo: {
+      providedCweb: availableCweb - transactionFee,
+      authenticated: authInfo,
+    },
+    contractArgs: [
+      constructRead(issuer, createOrderStateKey(id)),
+      constructRead(issuer, createOrderCollateralKey(id)),
+      constructRead(issuer, createMakerDepositKey(signer)),
+    ],
+  };
 
-  return [
-    constructContinueTx(
-      context,
-      [],
-      [
-        {
-          callInfo: {
-            ref: getContractRef(context),
-            methodInfo: {
-              methodName: PRIVATE_METHODS.CLOSE_ORDER,
-              methodArgs: [id, ORDER_ACTIVITY_STATUS.CANCELLED] satisfies DeactivateOrderPrivateArguments,
-            },
-            contractInfo: {
-              providedCweb: availableCweb - transactionFee,
-              authenticated: authInfo,
-            },
-            contractArgs: [
-              constructRead(issuer, createOrderStateKey(id)),
-              constructRead(issuer, createOrderCollateralKey(id)),
-              constructRead(issuer, createMakerDepositKey(signer)),
-            ],
-          },
-        },
-      ],
-    ),
-  ];
+  addContinuation(context, {
+    onSuccess: callInfo,
+  });
+
+  return [];
 };

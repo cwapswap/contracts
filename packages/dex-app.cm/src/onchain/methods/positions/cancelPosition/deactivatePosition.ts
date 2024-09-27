@@ -3,7 +3,6 @@ import {
   constructBlock,
   constructContinueTx,
   constructContractIssuer,
-  constructContractRef,
   constructRead,
   constructStore,
   constructTake,
@@ -11,10 +10,11 @@ import {
   extractContractInfo,
   extractRead,
   extractUser,
-  getAuthenticated,
   getContractId,
   getMethodArguments,
-  selfCallWrapper,
+  getQueueAuthenticated,
+  prepareQueueCall,
+  queueCostFee,
 } from '@coinweb/contract-kit';
 
 import {
@@ -34,9 +34,12 @@ import {
   createPositionStateClaim,
   createBestByQuoteIndex,
   getTime,
+  isEqualUser,
 } from '../../../utils';
 
-export const deactivatePosition = selfCallWrapper((context: Context) => {
+import { ClosePositionMethodArgs } from './types';
+
+export const deactivatePosition = (context: Context) => {
   const { tx } = context;
   const { providedCweb: availableCweb, authenticated: auth } = extractContractInfo(tx);
 
@@ -66,16 +69,16 @@ export const deactivatePosition = selfCallWrapper((context: Context) => {
 
   const { owner } = positionFundsClaim.body;
 
-  const signer = extractUser(getAuthenticated(tx)).payload;
+  const signer = extractUser(getQueueAuthenticated(tx));
 
-  if (owner !== signer) {
+  if (owner && !isEqualUser(owner, signer)) {
     throw new Error('Operation not permitted');
   }
 
   const issuer = constructContractIssuer(getContractId(tx));
 
   const firstTransactionFee = 300n;
-  const secondTransactionFee = 1000n;
+  const secondTransactionFee = 1000n + queueCostFee();
 
   const closingPlannedDate = getTime() + CONSTANTS.CLOSE_POSITION_TIMEOUT;
 
@@ -104,11 +107,15 @@ export const deactivatePosition = selfCallWrapper((context: Context) => {
       closingPlannedDate < positionState.expirationDate,
       constructContinueTx(
         context,
-        [],
+        [
+          constructBlock([
+            createExpirationPositionBlockFilter(closingPlannedDate),
+            createClosedPositionBlockFilter(issuer, positionId),
+          ]),
+        ],
         [
           {
-            callInfo: {
-              ref: constructContractRef(issuer, []),
+            callInfo: prepareQueueCall(issuer, {
               methodInfo: {
                 methodName: PRIVATE_METHODS.CLOSE_POSITION,
                 methodArgs: [
@@ -119,27 +126,21 @@ export const deactivatePosition = selfCallWrapper((context: Context) => {
                     quoteAmount: positionState.quoteAmount,
                     recipient: positionState.recipient,
                     chainData: positionState.chainData,
-                  } satisfies Pick<
-                    PositionStateClaimBody,
-                    'baseAmount' | 'createdAt' | 'quoteAmount' | 'recipient' | 'chainData'
-                  >,
-                ],
+                    expirationDate: positionState.expirationDate,
+                    txId: positionState.txId,
+                    error: positionState.error,
+                  },
+                ] satisfies ClosePositionMethodArgs,
               },
               contractInfo: {
                 providedCweb: availableCweb - firstTransactionFee - secondTransactionFee,
                 authenticated: auth,
               },
-              contractArgs: [
-                constructRead(issuer, createPositionFundsKey(positionId)),
-                constructBlock([
-                  createExpirationPositionBlockFilter(closingPlannedDate),
-                  createClosedPositionBlockFilter(issuer, positionId),
-                ]),
-              ],
-            },
+              contractArgs: [constructRead(issuer, createPositionFundsKey(positionId))],
+            }),
           },
         ],
       ),
     ),
   ];
-});
+};

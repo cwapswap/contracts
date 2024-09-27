@@ -1,6 +1,6 @@
-import { HexString } from '@coinweb/contract-kit';
+import type { HexString, User } from '@coinweb/contract-kit';
 
-import { ACTIVITY_STATUS, CallType, PAYMENT_STATUS } from './constants';
+import { ACTIVITY_STATUS, PAYMENT_STATUS, CallType } from './constants';
 
 export type PubKey = string;
 
@@ -17,33 +17,40 @@ export type PositionStateClaimBody = {
   funds: HexBigInt;
   chainData: ChainData;
   txId: string;
+  error: string | null;
 };
 
 export type PositionFundsClaimBody = {
-  owner?: PubKey;
+  owner: User;
   baseAmount: HexBigInt;
   quoteAmount: HexBigInt;
+};
+
+export type UniquenessClaimBody = {
+  message: string;
 };
 
 export type ChainData = unknown;
 
 export type BtcChainData = {
   l1TxId: string;
-  vout: string;
+  vout: number;
   psbt: string;
 };
 
 export type L1TxDataForAccept = {
   callType: CallType.Accept;
-  baseRecipient: HexString;
   quoteAmount: HexString;
   quoteRecipient: HexString;
+  baseRecipient: HexString;
 };
 
 export type L1TxDataForTransfer = {
   callType: CallType.Transfer;
-  nextContractId: HexString;
-  nextContractMethod: HexString;
   quoteAmount: HexString;
   quoteRecipient: HexString;
+  nextContractId: HexString;
+  nextContractMethod: HexString;
+  fallbackContractId: HexString;
+  fallbackContractMethod: HexString;
 };

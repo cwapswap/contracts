@@ -1,6 +1,6 @@
 ARG NODE_VERSION=22.5.1
 ARG NGINX_VERSION=1.23
-ARG BRANCH_NAME
+
 
 FROM node:$NODE_VERSION AS build
 WORKDIR /cwap
@@ -19,6 +19,7 @@ RUN yarn install
 
 # Copy the rest of the application files
 COPY . .
+ARG BRANCH_NAME
 RUN case $BRANCH_NAME in \
     main) yarn build:production ;; \
     *) yarn build ;; \

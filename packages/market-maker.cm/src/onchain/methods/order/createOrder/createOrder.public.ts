@@ -23,7 +23,7 @@ import { constructPrivateOrderCall } from './utils';
 export const createOrderPublic = (context: Context) => {
   const { authInfo, availableCweb } = getCallParameters(context);
 
-  const [baseAmount, l1Amount, baseWallet] = getMethodArguments<CreateOrderArguments>(context);
+  const [baseAmount, l1Amount, baseRecipient] = getMethodArguments<CreateOrderArguments>(context);
 
   const collateralPercentage = getInstanceParameters().collateral_percentage_Int;
   const collateral = (BigInt(baseAmount) * BigInt(collateralPercentage)) / 100n;
@@ -42,7 +42,7 @@ export const createOrderPublic = (context: Context) => {
     expirationDate: createdAt + CONSTANTS.ORDER_LIFE_TIME,
     collateral: toHex(collateral),
     covering: baseAmount,
-    baseWallet,
+    baseRecipient,
     owner: getUser(context),
     txId: context.call.txid,
   } satisfies OrderStateClaimBody;
@@ -51,5 +51,5 @@ export const createOrderPublic = (context: Context) => {
 
   const issuer = getContractIssuer(context);
 
-  return [constructPrivateOrderCall(context, issuer, orderId, initialState, availableCweb, authInfo)];
+  return constructPrivateOrderCall(context, issuer, orderId, initialState, availableCweb, authInfo);
 };

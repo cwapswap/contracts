@@ -1,3 +1,4 @@
+import { User } from '@coinweb/contract-kit';
 import { type GqlIssuedClaim } from '@coinweb/wallet-lib';
 
 import { OrderStateClaimBody, RequestStateClaimBody } from './shared';
@@ -26,12 +27,12 @@ export type Order = {
   covering: bigint;
 } & Omit<OrderStateClaimBody, 'baseAmount' | 'quoteAmount' | 'collateral' | 'covering'>;
 
-export type Claim = {
+export type ExecutionRequest = {
   id: string;
   baseAmount: bigint;
   quoteAmount: bigint;
   collateral: bigint;
-} & Omit<RequestStateClaimBody, 'baseAmount' | 'quoteAmount' | 'collateral'>;
+} & Omit<RequestStateClaimBody, 'requestedQuoteAmount' | 'promisedQuoteAmount' | 'baseAmount' | 'collateral'>;
 
 export type DepositRequestData = {
   contractId: string;
@@ -47,7 +48,7 @@ export type CreateOrderRequestData = {
   contractId: string;
   baseAmount: bigint;
   l1Amount: bigint;
-  baseWallet: string;
+  baseRecipient: User;
 };
 
 export type CancelOrderRequestData = {

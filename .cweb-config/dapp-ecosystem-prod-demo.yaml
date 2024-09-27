@@ -29,7 +29,6 @@ contract_instances:
       content:
         l1_type: 1
         shard: btc
-        address_prefix: '05'
         owner: 032691594ed340fa1a96ac45a9d8920faf51bd13960f5f04bbfe53afa700048dca
         owner_min_fee: '0x2386F26FC10000'
         owner_percentage_fee: 1
@@ -118,8 +117,8 @@ contract_instances:
   #         auth: EcdsaContract
   #         payload: 032691594ed340fa1a96ac45a9d8920faf51bd13960f5f04bbfe53afa700048dca
   #       collateral_percentage_Int: 100
-  #       owner_min_fee_Hex: '0x2386F26FC10000'
-  #       owner_percentage_fee_Int: 1
+  #       owner_min_fee_Hex: '0x0'
+  #       owner_percentage_fee_Int: 0
   #       logs: 
   #         - method-name
   #         - provided-cweb
@@ -137,8 +136,8 @@ contract_instances:
   #         auth: EcdsaContract
   #         payload: 032691594ed340fa1a96ac45a9d8920faf51bd13960f5f04bbfe53afa700048dca
   #       collateral_percentage_Int: 100
-  #       owner_min_fee_Hex: '0x2386F26FC10000'
-  #       owner_percentage_fee_Int: 1
+  #       owner_min_fee_Hex: '0x0'
+  #       owner_percentage_fee_Int: 0
   #       logs: 
   #         - method-name
   #         - provided-cweb
@@ -156,8 +155,8 @@ contract_instances:
   #         auth: EcdsaContract
   #         payload: 032691594ed340fa1a96ac45a9d8920faf51bd13960f5f04bbfe53afa700048dca
   #       collateral_percentage_Int: 100
-  #       owner_min_fee_Hex: '0x2386F26FC10000'
-  #       owner_percentage_fee_Int: 1
+  #       owner_min_fee_Hex: '0x0'
+  #       owner_percentage_fee_Int: 0
   #       logs: 
   #         - method-name
   #         - provided-cweb
@@ -175,8 +174,8 @@ contract_instances:
   #         auth: EcdsaContract
   #         payload: 032691594ed340fa1a96ac45a9d8920faf51bd13960f5f04bbfe53afa700048dca
   #       collateral_percentage_Int: 100
-  #       owner_min_fee_Hex: '0x2386F26FC10000'
-  #       owner_percentage_fee_Int: 1
+  #       owner_min_fee_Hex: '0x0'
+  #       owner_percentage_fee_Int: 0
   #       logs: 
   #         - method-name
   #         - provided-cweb

@@ -1,11 +1,4 @@
-import {
-  Context,
-  constructContinueTx,
-  constructStore,
-  constructTake,
-  passCwebFrom,
-  selfCallWrapper,
-} from '@coinweb/contract-kit';
+import { Context, constructContinueTx, constructStore, constructTake, passCwebFrom } from '@coinweb/contract-kit';
 
 import { MakerDepositClaimBody, createMakerDepositKey } from '../../../../offchain/shared';
 import { TypedClaim } from '../../../types';
@@ -22,7 +15,7 @@ import { isEqualUser } from '../../../utils/user';
 
 import { WithdrawPrivateArguments } from './types';
 
-export const withdraw = selfCallWrapper((context: Context) => {
+export const withdraw = (context: Context) => {
   const { availableCweb } = getCallParameters(context);
 
   const [withdrawAmount] = getMethodArguments<WithdrawPrivateArguments>(context);
@@ -51,7 +44,7 @@ export const withdraw = selfCallWrapper((context: Context) => {
       passCwebFrom(issuer, availableCweb),
       constructTake(createMakerDepositKey(existedDepositClaim.body.owner)),
       constructStore(createMakerDepositClaim({ user: existedDepositClaim.body.owner, amount: amountToStore })),
-      ...constructSendCweb(amountToWithdraw, existedDepositClaim.body.owner.payload as string, null), //TODO! handle contract as contract owner case
+      ...constructSendCweb(amountToWithdraw, existedDepositClaim.body.owner, null),
     ]),
   ];
-});
+};

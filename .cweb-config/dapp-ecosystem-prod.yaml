@@ -19,73 +19,175 @@ contract_templates:
   # Our contract module.  The contract module is an npm package created in the `dist/out`
   # directory using the `yarn build` and `yarn pack` commands.
   - file:///./packages/dex-app.cm/dist/out/my-contract-module.tgz
-  # - file:///./packages/market-maker.cm/dist/out/my-contract-module.tgz
+  - file:///./packages/market-maker.cm/dist/out/my-contract-module.tgz
 
 contract_instances:
-  - alias: btc_offer_maker 0.1.12+prod
-    template: dex-app.cm v0.1.12
+  # - alias: btc_offer_maker 0.0.31+prod
+  #   template: dex-app.cm v0.0.31+test
+  #   parameters:
+  #     content:
+  #       l1_type: 1
+  #       shard: btc
+  #       owner:
+  #         auth: EcdsaContract
+  #         payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+  #       owner_min_fee: '0x2386F26FC10000'
+  #       owner_percentage_fee: 1
+  #       logs:
+  #         - method-name
+  #         - provided-cweb
+  #         - method-args
+  #         - contract-args
+  #         - custom
+
+  - alias: eth_offer_maker 0.0.32+prod
+    template: dex-app.cm v0.0.32+test
     parameters:
       content:
-        l1_type: 1
-        shard: btc
-        address_prefix: '05'
-        owner: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
-        owner_min_fee: '0x2386F26FC10000'
+        shard: eth
+        l1_type: 0
+        l1_contract_address: "0xb18D9349dEed2604b5b31155BAe19c7E43375632"
+        owner:
+          auth: EcdsaContract
+          payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+        owner_min_fee: "0x2386F26FC10000"
         owner_percentage_fee: 1
+        logs:
+          - method-name
+          - provided-cweb
+          - method-args
+          - contract-args
+          - custom
 
-#   - alias: eth_dex_pact_maker v0.0.0+prod
-#     template: market-maker.cm v0.0.1+develop
-#     parameters:
-#       content:
-#         # https://etherscan.io/address/0x4F336FBEAE4Ad9EacB3881639dE18110Ec308BbB
-#         l1_contract_address: '0x4F336FBEAE4Ad9EacB3881639dE18110Ec308BbB'
-#         shard: eth
-#         owner:
-#           auth: EcdsaContract
-#           payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
-#         collateral_percentage_Int: 100
-#         owner_min_fee_Hex: '0x2386F26FC10000'
-#         owner_percentage_fee_Int: 1
+  # - alias: bnb_offer_maker 0.0.12+prod
+  #   template: dex-app.cm v0.0.12
+  #   parameters:
+  #     content:
+  #       shard: bnb
+  #       l1_type: 0
+  #       l1_contract_address: '0x688a12C3dd1b92F4739E40B4313Ad15540B2B377'
+  #       owner:
+  #         auth: EcdsaContract
+  #         payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+  #       owner_min_fee: '0x2386F26FC10000'
+  #       owner_percentage_fee: 1
+  #       logs:
+  #         - method-name
+  #         - provided-cweb
+  #         - method-args
+  #         - contract-args
+  #         - custom
 
+  # - alias: usdt_eth_offer_maker 0.0.12+prod
+  #   template: dex-app.cm v0.0.12
+  #   parameters:
+  #     content:
+  #       shard: eth
+  #       l1_type: 0
+  #       l1_contract_address: '0x688a12C3dd1b92F4739E40B4313Ad15540B2B377'
+  #       owner:
+  #         auth: EcdsaContract
+  #         payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+  #       owner_min_fee: '0x2386F26FC10000'
+  #       owner_percentage_fee: 1
+  #       logs:
+  #         - method-name
+  #         - provided-cweb
+  #         - method-args
+  #         - contract-args
+  #         - custom
 
-#   - alias: usdt_erc20_dex_pact_maker v0.0.0+prod
-#     template: market-maker.cm v0.0.1+develop
-#     parameters:
-#       content:
-#         # https://etherscan.io/address/0x61dfB1684c43e1F6D712d4A73bCd2d44C684F4Db
-#         l1_contract_address: '0x61dfB1684c43e1F6D712d4A73bCd2d44C684F4Db'
-#         shard: eth
-#         owner:
-#           auth: EcdsaContract
-#           payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
-#         collateral_percentage_Int: 100
-#         owner_min_fee_Hex: '0x2386F26FC10000'
-#         owner_percentage_fee_Int: 1
+  # - alias: usdt_bnb_offer_maker 0.0.12+prod
+  #   template: dex-app.cm v0.0.12
+  #   parameters:
+  #     content:
+  #       shard: bnb
+  #       l1_type: 0
+  #       l1_contract_address: '0xb88AB8c7e5F3CE5644e9Acd43EB9061dB44cCFbE8'
+  #       owner:
+  #         auth: EcdsaContract
+  #         payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+  #       owner_min_fee: '0x2386F26FC10000'
+  #       owner_percentage_fee: 1
+  #       logs:
+  #         - method-name
+  #         - provided-cweb
+  #         - method-args
+  #         - contract-args
+  #         - custom
 
-#   - alias: usdt_brc20_dex_pact_maker v0.0.0+prod
-#     template: market-maker.cm v0.0.1+develop
-#     parameters:
-#       content:
-#         # https://bscscan.com/address/0xb18D9349dEed2604b5b31155BAe19c7E43375632
-#         l1_contract_address: '0xb18D9349dEed2604b5b31155BAe19c7E43375632'
-#         shard: bnb
-#         owner:
-#           auth: EcdsaContract
-#           payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
-#         collateral_percentage_Int: 100
-#         owner_min_fee_Hex: '0x2386F26FC10000'
-#         owner_percentage_fee_Int: 1
+  - alias: eth_pact_maker v0.0.28+prod
+    template: market-maker.cm v0.0.28+test
+    parameters:
+      content:
+        shard: eth
+        l1_contract_address: "0x4F336FBEAE4Ad9EacB3881639dE18110Ec308BbB"
+        owner:
+          auth: EcdsaContract
+          payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+        collateral_percentage_Int: 100
+        owner_min_fee_Hex: "0x0"
+        owner_percentage_fee_Int: 0
+        logs:
+          - method-name
+          - provided-cweb
+          - method-args
+          - contract-args
+          - custom
 
-#   - alias: bnbm_dex_pact_maker v0.0.0+prod
-#     template: market-maker.cm v0.0.1+develop
-#     parameters:
-#       content:
-#         # https://bscscan.com/address/0x61dfB1684c43e1F6D712d4A73bCd2d44C684F4Db
-#         l1_contract_address: '0x61dfB1684c43e1F6D712d4A73bCd2d44C684F4Db'
-#         shard: bnb
-#         owner:
-#           auth: EcdsaContract
-#           payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
-#         collateral_percentage_Int: 100
-#         owner_min_fee_Hex: '0x2386F26FC10000'
-#         owner_percentage_fee_Int: 1
+  # - alias: bnb_pact_maker v0.0.11+prod
+  #   template: market-maker.cm v0.0.11
+  #   parameters:
+  #     content:
+  #       shard: bnb
+  #       l1_contract_address: '0x61dfB1684c43e1F6D712d4A73bCd2d44C684F4Db'
+  #       owner:
+  #         auth: EcdsaContract
+  #         payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+  #       collateral_percentage_Int: 100
+  #       owner_min_fee_Hex: '0x0'
+  #       owner_percentage_fee_Int: 0
+  #       logs:
+  #         - method-name
+  #         - provided-cweb
+  #         - method-args
+  #         - contract-args
+  #         - custom
+
+  # - alias: usdt_eth_pact_maker v0.0.11+prod
+  #   template: market-maker.cm v0.0.11
+  #   parameters:
+  #     content:
+  #       shard: eth
+  #       l1_contract_address: '0x61dfB1684c43e1F6D712d4A73bCd2d44C684F4Db'
+  #       owner:
+  #         auth: EcdsaContract
+  #         payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+  #       collateral_percentage_Int: 100
+  #       owner_min_fee_Hex: '0x0'
+  #       owner_percentage_fee_Int: 0
+  #       logs:
+  #         - method-name
+  #         - provided-cweb
+  #         - method-args
+  #         - contract-args
+  #         - custom
+
+  # - alias: usdt_bnb_pact_maker v0.0.11+prod
+  #   template: market-maker.cm v0.0.11
+  #   parameters:
+  #     content:
+  #       shard: bnb
+  #       l1_contract_address: '0xb18D9349dEed2604b5b31155BAe19c7E43375632'
+  #       owner:
+  #         auth: EcdsaContract
+  #         payload: 036d9316445a2a9823919f1df9e9fc932550078fe06b772a676eaaba33932432a1
+  #       collateral_percentage_Int: 100
+  #       owner_min_fee_Hex: '0x0'
+  #       owner_percentage_fee_Int: 0
+  #       logs:
+  #         - method-name
+  #         - provided-cweb
+  #         - method-args
+  #         - contract-args
+  #         - custom

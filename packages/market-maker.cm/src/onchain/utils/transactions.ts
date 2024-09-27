@@ -1,6 +1,6 @@
-import { NewTxContinue, NewTxJump, PreparedOperation, ecdsaContract } from '@coinweb/contract-kit';
+import { NewTxContinue, NewTxJump, PreparedOperation, sendCwebInterface } from '@coinweb/contract-kit';
 
-export const { constructSendCweb } = ecdsaContract();
+export const { constructSendCweb } = sendCwebInterface();
 
 type ConditionalInput = PreparedOperation[] | PreparedOperation | NewTxContinue | NewTxJump;
 

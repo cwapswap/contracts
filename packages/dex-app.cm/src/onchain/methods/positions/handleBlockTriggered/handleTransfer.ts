@@ -2,12 +2,16 @@ import {
   AuthInfo,
   Context,
   ContractIssuer,
+  addContinuation,
   constructContinueTx,
+  constructContractIssuer,
   constructContractRef,
   constructRead,
   constructStore,
   constructTake,
   passCwebFrom,
+  prepareQueueCall,
+  queueCostFee,
 } from '@coinweb/contract-kit';
 
 import {
@@ -34,6 +38,7 @@ import {
   createEvmEventClaimKey,
   constructConditional,
   constructSendCweb,
+  log,
 } from '../../../utils';
 
 const constructTransfer = (
@@ -45,7 +50,7 @@ const constructTransfer = (
   callContractData: CallContractData,
 ) => {
   const { l2Contract, l2MethodName, l2Args } = callContractData;
-  const transactionFee = 4000n;
+  const transactionFee = 4000n + queueCostFee();
 
   return [
     constructContinueTx(
@@ -77,8 +82,7 @@ const constructTransfer = (
       ],
       [
         {
-          callInfo: {
-            ref: constructContractRef({ FromSmartContract: l2Contract }, []),
+          callInfo: prepareQueueCall(constructContractIssuer(l2Contract), {
             methodInfo: {
               methodName: l2MethodName,
               methodArgs: [...l2Args],
@@ -88,7 +92,7 @@ const constructTransfer = (
               authenticated: null,
             },
             contractArgs: [],
-          },
+          }),
         },
       ],
     ),
@@ -122,7 +126,7 @@ const constructTransferWithNewPosition = (
   const eventClaimKey = createEvmEventClaimKey(positionId, eventNonce);
 
   const jumpContractFee = 2000n;
-  const firstTransactionFee = 4000n + jumpContractFee;
+  const firstTransactionFee = 4000n + jumpContractFee + queueCostFee();
 
   const secondTransactionFee = 2200n;
 
@@ -152,8 +156,7 @@ const constructTransferWithNewPosition = (
       [
         ...constructJumpCall(eventClaimKey, jumpContractFee),
         {
-          callInfo: {
-            ref: constructContractRef({ FromSmartContract: l2Contract }, []),
+          callInfo: prepareQueueCall(constructContractIssuer(l2Contract), {
             methodInfo: {
               methodName: l2MethodName,
               methodArgs: [...l2Args],
@@ -163,25 +166,21 @@ const constructTransferWithNewPosition = (
               authenticated: null,
             },
             contractArgs: [],
-          },
+          }),
         },
       ],
     ),
-    constructContinueTx(
-      context,
-      [],
-      createCallWithL1EventBlock({
-        methodName: PRIVATE_METHODS.HANDLE_BLOCK_TRIGGERED,
-        issuer,
-        providedCweb: availableCweb - firstTransactionFee - secondTransactionFee,
-        authenticated,
-        eventNonce,
-        withExpiration: !!fundsClaim.body.owner,
-        positionId,
-        positionState,
-        eventClaimKey,
-      }),
-    ),
+    createCallWithL1EventBlock(context, {
+      methodName: PRIVATE_METHODS.HANDLE_BLOCK_TRIGGERED,
+      issuer,
+      providedCweb: availableCweb - firstTransactionFee - secondTransactionFee,
+      authenticated,
+      eventNonce,
+      withExpiration: fundsClaim.body.owner.auth === 'EcdsaContract',
+      positionId,
+      positionState,
+      eventClaimKey,
+    }),
   ];
 };
 
@@ -198,7 +197,7 @@ const constructTransferWithCwebReturn = (
 ) => {
   const { l2Contract, l2MethodName, l2Args } = callContractData;
 
-  const transactionFee = 4000n;
+  const transactionFee = 4000n + queueCostFee();
 
   const fundsToReturn = availableCweb + positionCwebAmount - spendAmount - transactionFee;
 
@@ -208,7 +207,7 @@ const constructTransferWithCwebReturn = (
       [
         passCwebFrom(issuer, availableCweb),
         constructTake(createPositionFundsKey(positionId)),
-        ...constructSendCweb(fundsToReturn, fundsClaim.body.owner!, null),
+        ...constructSendCweb(fundsToReturn, fundsClaim.body.owner, null),
         ...constructConditional(positionState.activityStatus === ACTIVITY_STATUS.ACTIVE, [
           constructTake(createActivePositionIndexKey(positionState.createdAt, positionId)),
           constructTake(
@@ -233,8 +232,7 @@ const constructTransferWithCwebReturn = (
       ],
       [
         {
-          callInfo: {
-            ref: constructContractRef({ FromSmartContract: l2Contract }, []),
+          callInfo: prepareQueueCall(constructContractIssuer(l2Contract), {
             methodInfo: {
               methodName: l2MethodName,
               methodArgs: [...l2Args],
@@ -244,7 +242,7 @@ const constructTransferWithCwebReturn = (
               authenticated: null,
             },
             contractArgs: [],
-          },
+          }),
         },
       ],
     ),
@@ -287,49 +285,47 @@ export const handleTransfer = (
       const transactionFee = 1100n;
 
       return [
-        constructContinueTx(
-          context,
-          [],
-          createCallWithL1EventBlock({
-            methodName: PRIVATE_METHODS.HANDLE_BLOCK_TRIGGERED,
-            issuer,
-            providedCweb: availableCweb - transactionFee,
-            authenticated,
-            eventNonce,
-            withExpiration: !!fundsClaim.body.owner,
-            positionId,
-            positionState,
-            eventClaimKey: createEvmEventClaimKey(positionId, eventNonce),
-          }),
-        ),
+        createCallWithL1EventBlock(context, {
+          methodName: PRIVATE_METHODS.HANDLE_BLOCK_TRIGGERED,
+          issuer,
+          providedCweb: availableCweb - transactionFee,
+          authenticated,
+          eventNonce,
+          withExpiration: !!fundsClaim.body.owner,
+          positionId,
+          positionState,
+          eventClaimKey: createEvmEventClaimKey(positionId, eventNonce),
+        }),
       ];
     }
 
-    const transactionFee = 900n;
+    log({
+      paidAmount,
+      dueCwebAmount,
+      recipient,
+      positionState,
+    });
 
-    return [
-      //TODO: Clarify what exactly we need to do with wrong btc payment
-      constructContinueTx(
-        context,
-        [],
-        [
-          {
-            callInfo: {
-              ref: constructContractRef(issuer, []),
-              methodInfo: {
-                methodName: PRIVATE_METHODS.CLOSE_POSITION,
-                methodArgs: [positionId, positionState],
-              },
-              contractInfo: {
-                providedCweb: availableCweb - transactionFee,
-                authenticated,
-              },
-              contractArgs: [constructRead(issuer, createPositionFundsKey(positionId))],
-            },
-          },
-        ],
-      ),
-    ];
+    //TODO: Clarify what exactly we need to do with wrong btc payment
+    const transactionFee = 900n;
+    const callInfo = {
+      ref: constructContractRef(issuer, []),
+      methodInfo: {
+        methodName: PRIVATE_METHODS.CLOSE_POSITION,
+        methodArgs: [positionId, positionState],
+      },
+      contractInfo: {
+        providedCweb: availableCweb - transactionFee,
+        authenticated,
+      },
+      contractArgs: [constructRead(issuer, createPositionFundsKey(positionId))],
+    };
+
+    addContinuation(context, {
+      onSuccess: callInfo,
+    });
+
+    return [];
   }
 
   const isParticular = dueCwebAmount < positionCwebAmount;

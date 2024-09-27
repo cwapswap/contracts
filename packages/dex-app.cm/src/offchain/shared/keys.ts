@@ -1,7 +1,9 @@
-import type { ClaimKey } from '@coinweb/contract-kit';
+import type { ClaimKey, OrdJson, User } from '@coinweb/contract-kit';
 
 import { Key } from './constants';
-import type { PubKey } from './types';
+import { BtcChainData } from './types';
+
+/* FirstPart */
 
 export const createPositionStateFirstPart = () => [Key.STATE];
 
@@ -15,12 +17,17 @@ export const createActivePositionIndexFirstPart = () => [Key.ACTIVE_INDEX];
 
 export const createBestByQuoteActiveIndexFirstPart = () => [Key.BEST_BY_QUOTE_INDEX, Key.ACTIVE_INDEX];
 
-export const createUserIndexFirstPart = (pubKey: PubKey) => [Key.USER_INDEX, pubKey];
+export const createUserIndexFirstPart = (user: User) => [Key.USER_INDEX, user];
 
 export const createClosedIndexFirstPart = () => [Key.CLOSED_INDEX];
 
 export const createOwnerFirstPart = () => [Key.CONTRACT_OWNER];
 
+export const createUniquenessFirstPart = () => [Key.UNIQUENESS_CHECK];
+
+export const createErrorByDateFirstPart = () => [Key.ERROR_INDEX, Key.DATE_INDEX];
+
+/* Key */
 export const createPositionStateKey = (positionId: string) =>
   ({
     first_part: createPositionStateFirstPart(),
@@ -57,9 +64,9 @@ export const createBestByQuoteActiveIndexKey = (rate: bigint, positionId: string
     second_part: [rate.toString(16), positionId],
   }) satisfies ClaimKey;
 
-export const createUserIndexKey = (pubKey: PubKey, timestamp: number, positionId: string) =>
+export const createUserIndexKey = (user: User, timestamp: number, positionId: string) =>
   ({
-    first_part: createUserIndexFirstPart(pubKey),
+    first_part: createUserIndexFirstPart(user),
     second_part: [Number.MAX_SAFE_INTEGER - timestamp, positionId],
   }) satisfies ClaimKey;
 
@@ -73,4 +80,22 @@ export const createOwnerKey = () =>
   ({
     first_part: createOwnerFirstPart(),
     second_part: [],
+  }) satisfies ClaimKey;
+
+export const createUniquenessKey = (data: OrdJson) =>
+  ({
+    first_part: createUniquenessFirstPart(),
+    second_part: data,
+  }) satisfies ClaimKey;
+
+export const createBtcUtxoUniquenessKey = (data: BtcChainData) =>
+  ({
+    first_part: createUniquenessFirstPart(),
+    second_part: [data.l1TxId, data.vout],
+  }) satisfies ClaimKey;
+
+export const createErrorByDateKey = (timestamp: number, positionId: string) =>
+  ({
+    first_part: createErrorByDateFirstPart(),
+    second_part: [timestamp, positionId],
   }) satisfies ClaimKey;

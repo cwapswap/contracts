@@ -31,23 +31,26 @@
     "dev": "yarn workspaces foreach -Apiv run dev",
     "typecheck": "yarn workspaces foreach -Ap run typecheck",
     "prepare": "yarn --cwd=../../. prepare:dex-tx",
-    "prepare:dapp-ui": "yarn husky packages/dapp-ui/.husky"
+    "prepare:dapp-ui": "yarn husky packages/dapp-ui/.husky",
+    "lint": "yarn workspaces foreach -Av run lint",
+    "update-env": "node scripts/update-ui-env.js"
   },
   "resolutions": {
-    "@coinweb/cweb-tool": "2.0.17",
+    "@coinweb/cweb-tool": "2.0.19",
     "@coinweb/wallet-lib": "0.1.113-esm",
     "@coinweb/self-register": "0.1.3",
     "@coinweb/claims-client": "0.1.6-debug",
-    "@coinweb/contract-kit": "0.1.10",
-    "@coinweb/testing-sdk": "0.0.7",
-    "@coinweb/minimal-sdk": "1.2.15-dev"
+    "@coinweb/contract-kit": "0.2.1-block-queue",
+    "@coinweb/testing-sdk": "0.0.8",
+    "@coinweb/minimal-sdk": "1.2.18"
   },
   "devDependencies": {
-    "@coinweb/cweb-tool": "2.0.17",
-    "@coinweb/minimal-sdk": "1.2.15-dev",
-    "@coinweb/testing-sdk": "0.0.7",
+    "@coinweb/cweb-tool": "2.0.19",
+    "@coinweb/minimal-sdk": "1.2.18",
+    "@coinweb/testing-sdk": "0.0.8",
     "envsub": "^4.1.0",
     "eslint": "^8.57.0",
+    "eslint-import-resolver-typescript": "^3.6.3",
     "eslint-plugin-import": "^2.29.1",
     "husky": "^9.1.4",
     "lint-staged": "^15.2.4",

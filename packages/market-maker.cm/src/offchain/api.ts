@@ -13,7 +13,7 @@ import {
   createRequestStateKey,
   RequestStateClaimBody,
 } from './shared';
-import { Claim, Client, Order } from './types';
+import { ExecutionRequest, Client, Order } from './types';
 
 export const getOrderById = async (client: Client, id: string) => {
   const key = createOrderStateKey(id);
@@ -47,13 +47,31 @@ export const getClaimById = async (client: Client, id: string) => {
 
   const data = claimResponse.content.body as RequestStateClaimBody;
 
+  const {
+    createdAt,
+    executionStatus,
+    expirationDate,
+    fallbackContractId,
+    fallbackMethodName,
+    quoteWallet,
+    requestedOrderId,
+    txId,
+  } = data;
+
   return {
-    ...data,
     id,
     baseAmount: BigInt(data.baseAmount),
-    quoteAmount: BigInt(data.quoteAmount),
+    quoteAmount: BigInt(data.promisedQuoteAmount),
     collateral: BigInt(data.collateral),
-  } satisfies Claim;
+    createdAt,
+    executionStatus,
+    expirationDate,
+    fallbackContractId,
+    fallbackMethodName,
+    quoteWallet,
+    requestedOrderId,
+    txId,
+  } satisfies ExecutionRequest;
 };
 
 export const getAllOwnOrdersIds = async (client: Client, owner: User): Promise<string[]> => {

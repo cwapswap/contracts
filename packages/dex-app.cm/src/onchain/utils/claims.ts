@@ -1,5 +1,4 @@
-import { type Claim, constructClaim, ClaimKey, constructClaimKey } from '@coinweb/contract-kit';
-import type { PubKey } from '@coinweb/wallet-lib';
+import { type Claim, constructClaim, ClaimKey, constructClaimKey, User, OrdJson } from '@coinweb/contract-kit';
 
 import {
   createActivePositionIndexKey,
@@ -15,6 +14,11 @@ import {
   createClosedIndexKey,
   createOwnerKey,
   createBestByQuoteActiveIndexKey,
+  createErrorByDateKey,
+  createUniquenessKey,
+  UniquenessClaimBody,
+  BtcChainData,
+  createBtcUtxoUniquenessKey,
 } from '../../offchain/shared';
 import { CONSTANTS } from '../constants';
 import { L1Types, OwnerClaimBody } from '../types';
@@ -34,7 +38,7 @@ export const createFundsClaim = ({
 }: {
   positionId: string;
   amount: bigint;
-  owner?: PubKey;
+  owner: User;
   baseAmount: HexBigInt;
   quoteAmount: HexBigInt;
 }): Claim =>
@@ -81,19 +85,19 @@ export const createBestByQuoteActiveIndexClaim = ({
   );
 
 export const createUserIndexClaim = ({
-  pubKey,
+  user,
   timestamp,
   positionId,
 }: {
-  pubKey: PubKey;
+  user: User;
   timestamp: number;
   positionId: string;
-}): Claim => constructClaim(createUserIndexKey(pubKey, timestamp, positionId), {}, toHex(0));
+}): Claim => constructClaim(createUserIndexKey(user, timestamp, positionId), {}, toHex(0));
 
 export const createClosedIndexClaim = ({ positionId }: { positionId: string }): Claim =>
   constructClaim(createClosedIndexKey(positionId), {}, toHex(0));
 
-export const createOwnerClaim = ({ owner }: { owner: string }): Claim =>
+export const createOwnerClaim = ({ owner }: { owner: User }): Claim =>
   constructClaim(
     createOwnerKey(),
     {
@@ -118,3 +122,17 @@ export const createEvmEventClaimKey = (positionId: string, nonce: bigint): Claim
 
 export const createExpirationPositionClaimKey = (expirationDate: number): ClaimKey =>
   constructClaimKey('L2BlockIdToHeightFirstPart', getExpectedBlockHeight(expirationDate));
+
+export const createErrorByDateIndexClaim = ({
+  timestamp,
+  positionId,
+}: {
+  timestamp: number;
+  positionId: string;
+}): Claim => constructClaim(createErrorByDateKey(timestamp, positionId), {}, toHex(0));
+
+export const createUniquenessClaim = ({ data, message }: { data: OrdJson; message: string }): Claim =>
+  constructClaim(createUniquenessKey(data), { message } satisfies UniquenessClaimBody, toHex(0));
+
+export const createBtcUtxoUniquenessClaim = ({ data, message }: { data: BtcChainData; message: string }): Claim =>
+  constructClaim(createBtcUtxoUniquenessKey(data), { message } satisfies UniquenessClaimBody, toHex(0));

@@ -39,3 +39,4 @@ tests_data/
 .actions.yaml
 .actions-prod.yaml
 .actions-devnet-blue.yaml
+prepared-state.json

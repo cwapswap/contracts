@@ -1,11 +1,4 @@
-import {
-  Context,
-  constructContinueTx,
-  constructStore,
-  constructTake,
-  passCwebFrom,
-  selfCallWrapper,
-} from '@coinweb/contract-kit';
+import { Context, constructContinueTx, constructStore, constructTake, passCwebFrom } from '@coinweb/contract-kit';
 
 import {
   CollateralClaimBody,
@@ -33,7 +26,7 @@ import { isEqualUser } from '../../../utils/user';
 
 import { CloseOrderPrivateArguments } from './types';
 
-export const closeOrder = selfCallWrapper((context: Context) => {
+export const closeOrder = (context: Context) => {
   const { availableCweb } = getCallParameters(context);
   const signer = getUser(context);
 
@@ -96,4 +89,4 @@ export const closeOrder = selfCallWrapper((context: Context) => {
       constructStore(createClosedOrderIndexClaim({ id })),
     ]),
   ];
-});
+};

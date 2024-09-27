@@ -2,7 +2,7 @@ import {
   AuthInfo,
   Context,
   ContractIssuer,
-  constructContinueTx,
+  addContinuation,
   constructContractRef,
   constructRead,
 } from '@coinweb/contract-kit';
@@ -21,28 +21,25 @@ export const constructPrivateOrderCall = (
   authenticated: AuthInfo,
 ) => {
   const transactionFee = 1000n;
-
-  return constructContinueTx(
-    context,
-    [],
-    [
-      {
-        callInfo: {
-          ref: constructContractRef(issuer, []),
-          methodInfo: {
-            methodName: PRIVATE_METHODS.CREATE_ORDER,
-            methodArgs: [orderId, orderInitialState] satisfies CreateOrderPrivateArguments,
-          },
-          contractInfo: {
-            providedCweb: providedCweb - transactionFee,
-            authenticated,
-          },
-          contractArgs: [
-            constructRead(issuer, createOrderStateKey(orderId)),
-            constructRead(issuer, createMakerDepositKey(getUser(context))),
-          ],
-        },
-      },
+  const callInfo = {
+    ref: constructContractRef(issuer, []),
+    methodInfo: {
+      methodName: PRIVATE_METHODS.CREATE_ORDER,
+      methodArgs: [orderId, orderInitialState] satisfies CreateOrderPrivateArguments,
+    },
+    contractInfo: {
+      providedCweb: providedCweb - transactionFee,
+      authenticated,
+    },
+    contractArgs: [
+      constructRead(issuer, createOrderStateKey(orderId)),
+      constructRead(issuer, createMakerDepositKey(getUser(context))),
     ],
-  );
+  };
+
+  addContinuation(context, {
+    onSuccess: callInfo,
+  });
+
+  return [];
 };

@@ -1,6 +1,6 @@
 import {
   Context,
-  constructContinueTx,
+  addContinuation,
   constructContractIssuer,
   constructContractRef,
   constructRead,
@@ -30,29 +30,25 @@ export const cancelPositionPublic = (context: Context) => {
 
   const transactionFee = 1000n;
 
-  return [
-    constructContinueTx(
-      context,
-      [],
-      [
-        {
-          callInfo: {
-            ref: constructContractRef(issuer, []),
-            methodInfo: {
-              methodName: PRIVATE_METHODS.DEACTIVATE_POSITION,
-              methodArgs: [positionId],
-            },
-            contractInfo: {
-              providedCweb: availableCweb - transactionFee,
-              authenticated: auth,
-            },
-            contractArgs: [
-              constructRead(issuer, createPositionStateKey(positionId)),
-              constructRead(issuer, createPositionFundsKey(positionId)),
-            ],
-          },
-        },
-      ],
-    ),
-  ];
+  const callInfo = {
+    ref: constructContractRef(issuer, []),
+    methodInfo: {
+      methodName: PRIVATE_METHODS.DEACTIVATE_POSITION,
+      methodArgs: [positionId],
+    },
+    contractInfo: {
+      providedCweb: availableCweb - transactionFee,
+      authenticated: auth,
+    },
+    contractArgs: [
+      constructRead(issuer, createPositionStateKey(positionId)),
+      constructRead(issuer, createPositionFundsKey(positionId)),
+    ],
+  };
+
+  addContinuation(context, {
+    onSuccess: callInfo,
+  });
+
+  return [];
 };

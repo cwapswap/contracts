@@ -6,7 +6,8 @@ import {
   constructStore,
   constructTake,
   passCwebFrom,
-  selfCallWrapper,
+  prepareQueueCall,
+  queueCostFee,
 } from '@coinweb/contract-kit';
 
 import {
@@ -31,7 +32,6 @@ import {
   createMakerDepositClaim,
   getCallParameters,
   getContractIssuer,
-  getContractRef,
   getMethodArguments,
   getReadClaimByIndex,
   getUser,
@@ -43,7 +43,7 @@ import { DeactivateOrderPrivateArguments } from '../cancelOrder/types';
 import { CreateOrderPrivateArguments } from './types';
 import { constructPrivateOrderCall } from './utils';
 
-export const createOrder = selfCallWrapper((context: Context) => {
+export const createOrder = (context: Context) => {
   const { authInfo, availableCweb } = getCallParameters(context);
 
   const [id, initialState] = getMethodArguments<CreateOrderPrivateArguments>(context);
@@ -55,7 +55,7 @@ export const createOrder = selfCallWrapper((context: Context) => {
   if (existingOrder) {
     const orderNewId = hashObject(initialState, id);
 
-    return [constructPrivateOrderCall(context, issuer, orderNewId, initialState, availableCweb, authInfo)];
+    return constructPrivateOrderCall(context, issuer, orderNewId, initialState, availableCweb, authInfo);
   }
 
   const depositClaim = getReadClaimByIndex<TypedClaim<MakerDepositClaimBody>>(context)(1);
@@ -76,7 +76,7 @@ export const createOrder = selfCallWrapper((context: Context) => {
   }
 
   const firstTransactionFee = 1200n;
-  const secondTransactionFee = 1000n;
+  const secondTransactionFee = 1000n + queueCostFee();
 
   const user = getUser(context);
 
@@ -139,11 +139,15 @@ export const createOrder = selfCallWrapper((context: Context) => {
     ]),
     constructContinueTx(
       context,
-      [],
+      [
+        constructBlock([
+          createExpirationBlockFilter(initialState.createdAt + CONSTANTS.ORDER_LIFE_TIME),
+          createClosedOrderBlockFilter(issuer, id),
+        ]),
+      ],
       [
         {
-          callInfo: {
-            ref: getContractRef(context),
+          callInfo: prepareQueueCall(getContractIssuer(context), {
             methodInfo: {
               methodName: PRIVATE_METHODS.CLOSE_ORDER,
               methodArgs: [id, ORDER_ACTIVITY_STATUS.EXPIRED] satisfies DeactivateOrderPrivateArguments,
@@ -156,14 +160,10 @@ export const createOrder = selfCallWrapper((context: Context) => {
               constructRead(issuer, createOrderStateKey(id)),
               constructRead(issuer, createOrderCollateralKey(id)),
               constructRead(issuer, createMakerDepositKey(user)),
-              constructBlock([
-                createExpirationBlockFilter(initialState.createdAt + CONSTANTS.ORDER_LIFE_TIME),
-                createClosedOrderBlockFilter(issuer, id),
-              ]),
             ],
-          },
+          }),
         },
       ],
     ),
   ];
-});
+};

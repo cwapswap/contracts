@@ -7,7 +7,6 @@ import {
   extractRead,
   getMethodArguments,
   getParameters,
-  selfCallWrapper,
 } from '@coinweb/contract-kit';
 
 import { InstanceParameters, ContractOwnerClaimBody } from '../../../types';
@@ -15,7 +14,7 @@ import { getUser } from '../../../utils';
 import { createContractOwnerClaim } from '../../../utils/claims';
 import { isEqualUser } from '../../../utils/user';
 
-export const changeContractOwner = selfCallWrapper((context: Context) => {
+export const changeContractOwner = (context: Context) => {
   const { tx } = context;
 
   const [, newOwner] = getMethodArguments(context) as [unknown, User];
@@ -43,4 +42,4 @@ export const changeContractOwner = selfCallWrapper((context: Context) => {
       ),
     ]),
   ];
-});
+};

@@ -22,7 +22,7 @@
     "project": true,
     "exclude": ["**/node_modules/**", "**/dist/**", "**/cweb_dist/**"]
   },
-  "ignorePatterns": ["dist", "cweb_dist"],
+  "ignorePatterns": ["dist", "cweb_dist", "vitest.config.*"],
   "rules": {
     "import/newline-after-import": "error",
     "import/order": [

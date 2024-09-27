@@ -1,6 +1,6 @@
 {
   "name": "dex-app.cm",
-  "version": "0.1.12",
+  "version": "0.0.34+test",
   "type": "module",
   "description": "Contract to create an offer to give cweb in exchange for an specific l1-token",
   "homepage": "https://git.coinhq.store/acme/cwap/",
@@ -13,7 +13,7 @@
     "build:files": "yarn clean && tsc -p tsconfig.build.json && NODE_ENV=production ./scripts/build.sh",
     "start": "node src/offchain/index.js",
     "test": "vitest run --pool=forks",
-    "test:prepare": "mkdir -p tests_data && cp ../../prepared-state.json tests_data/state.json && cp ../../.dapp-ecosystem-lock-test.yaml tests_data/index.yaml",
+    "test:prepare": "mkdir -p tests_data && cp ../../prepared-state.json tests_data/state.json && cp ../../.dapp-ecosystem-lock-tests.yaml tests_data/index.yaml",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "pack:all": "yarn pack:cweb && yarn pack:yarn",
@@ -25,10 +25,11 @@
     "call-contract:invoke": "cweb-tool call deploy/calls.yaml -c ../../.cweb-config/config.yaml --profile $REGISTRATION_PROFILE",
     "clean": "rm -rf cweb_dist dist .calls.yaml",
     "typecheck": "tsc --noEmit",
-    "dev": "tsc -p tsconfig.dev.json --watch"
+    "dev": "tsc -p tsconfig.dev.json --watch",
+    "lint": "eslint . --ext js,cjs,mjs,mts,ts,tsx"
   },
   "dependencies": {
-    "@coinweb/contract-kit": "0.1.10",
+    "@coinweb/contract-kit": "0.2.1-block-queue",
     "@coinweb/self-register": "0.1.4",
     "@noble/hashes": "^1.4.0",
     "base58-js": "^2.0.0"

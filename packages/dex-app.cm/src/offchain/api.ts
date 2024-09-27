@@ -1,5 +1,4 @@
-import { ClaimKey } from '@coinweb/contract-kit';
-import type { PubKey } from '@coinweb/wallet-lib';
+import { ClaimKey, User } from '@coinweb/contract-kit';
 
 import {
   createActivePositionIndexFirstPart,
@@ -36,8 +35,8 @@ export const getLastPositionIds = async (client: Client): Promise<string[]> => {
   return claimsResponse.map(({ content }) => ((content.key as ClaimKey).second_part as [number, string])[1]);
 };
 
-export const getUserPositionIds = async (client: Client, pubKey: PubKey): Promise<string[]> => {
-  const claimsResponse = await client.fetchClaims(createUserIndexFirstPart(pubKey), null);
+export const getUserPositionIds = async (client: Client, user: User): Promise<string[]> => {
+  const claimsResponse = await client.fetchClaims(createUserIndexFirstPart(user), null);
 
   return claimsResponse.map(({ content }) => ((content.key as ClaimKey).second_part as [number, string])[1]);
 };
@@ -64,5 +63,7 @@ export const getPositionById = async (client: Client, id: string) => {
     funds: BigInt(data.funds),
     chainData: data.chainData,
     txId: data.txId,
+    error: data.error,
+    expirationDate: data.expirationDate,
   } satisfies PositionData;
 };

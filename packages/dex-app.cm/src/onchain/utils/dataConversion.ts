@@ -10,8 +10,9 @@ import {
   toHex,
   L1TxDataForAccept,
   L1TxDataForTransfer,
+  BtcShardNetwork,
 } from '../../offchain/shared';
-import { L1EventData, L1Types, Logs } from '../types';
+import { L1EventData, L1Types } from '../types';
 
 import { getInstanceParameters } from './contract';
 import { log } from './logger';
@@ -82,11 +83,22 @@ const getEvmEventData = (body: unknown) => {
   }
 };
 
-const btcOutputToAddress = (hex: string) => {
-  const addressPrefix = getInstanceParameters(L1Types.Btc).address_prefix;
+const getBtcNetworkScriptHash = () => {
+  const shard = getInstanceParameters().shard;
+
+  if (!['btc', 'tbtc'].includes(shard)) {
+    throw new Error('Incorrect contract instance parameters');
+  }
+
+  return BtcShardNetwork[shard as 'btc' | 'tbtc'].scriptHash;
+};
+
+export const btcOutputToAddress = (hex: string) => {
+  const scriptHash = getBtcNetworkScriptHash();
+
   let tmp = hex;
 
-  tmp = `${addressPrefix}${tmp}`;
+  tmp = `${scriptHash.toString(16).padStart(2, '0')}${hex}`;
   const hex1 = hexToUint8(tmp);
   const text1 = sha256(hex1);
   const text2 = sha256(text1);
@@ -122,66 +134,80 @@ export const parseEvmEventClaimBody = (body: unknown): L1EventData => {
   };
 };
 
-const getBtcEventData = (body: unknown) => {
-  log('log', 1);
-  console.log('console.log', 1);
+export const decodeMultisigOut = (asms: Array<string>) => {
+  const chunks = asms
+    .filter((asm) => /.*OP_CHECKMULTISIG/gi.test(asm))
+    .flatMap((asm) => asm.split(' '))
+    .filter((word) => word.length === 66)
+    .map((word) => word.slice(4))
+    .concat();
+
+  const hexData = ''.concat(...chunks).replace(/ff(00)*$/gi, '');
+
+  return hexData;
+};
+
+export const decodeOpReturnOut = (asms: Array<string>) => {
+  return asms.find((asm) => asm.startsWith('OP_RETURN '))?.replace('OP_RETURN ', '');
+};
+
+type BtcEventData = {
+  data: string;
+  value: `0x${string}`;
+  wallet: string;
+};
+
+const getBtcEventData = (body: unknown): BtcEventData | undefined => {
+  log(body);
 
   type BtcVout = {
+    value: number;
     scriptPubKey: {
       asm: string;
     };
   };
-  const BTC_TEXT = 'OP_RETURN ';
-  const BTC_TEXT_WALLET_START = 'OP_HASH160 ';
-  const BTC_TEXT_WALLET_END = ' OP_EQUAL';
 
   if (body && typeof body === 'object' && 'UtxoBased' in body) {
     if (body.UtxoBased && typeof body.UtxoBased === 'object' && 'vout' in body.UtxoBased) {
       if (Array.isArray(body.UtxoBased.vout)) {
-        const dataArray = body.UtxoBased.vout.filter(
-          (item): item is BtcVout =>
-            item &&
-            typeof item === 'object' &&
-            item.scriptPubKey &&
-            typeof item.scriptPubKey === 'object' &&
-            typeof item.scriptPubKey.asm === 'string' &&
-            item.scriptPubKey.asm.startsWith(BTC_TEXT),
-        );
-        let data = '';
-        let valueBtc: number;
-        let walletBtc = '';
-        const vout = body.UtxoBased.vout[body.UtxoBased.vout.length - 2];
+        const outs = body.UtxoBased.vout
+          .filter(
+            (item): item is BtcVout =>
+              item &&
+              typeof item === 'object' &&
+              typeof item.value === 'number' &&
+              item.scriptPubKey &&
+              typeof item.scriptPubKey === 'object' &&
+              typeof item.scriptPubKey.asm === 'string',
+          )
+          .map(({ scriptPubKey: { asm }, value }) => ({ asm, value }));
 
-        if (vout.scriptPubKey.asm.startsWith(BTC_TEXT)) {
-          valueBtc = Number(body.UtxoBased.vout[body.UtxoBased.vout.length - 1].value) * 1e8;
-          const outputHash = body.UtxoBased.vout[body.UtxoBased.vout.length - 1].scriptPubKey.asm
-            .replace(BTC_TEXT_WALLET_START, '')
-            .replace(BTC_TEXT_WALLET_END, '');
+        const sendFundOut = outs[outs.length - 1];
 
-          console.log(Logs.Custom, `Hash btc script (1): ${outputHash}`);
-          walletBtc = btcOutputToAddress(outputHash);
-        } else {
-          valueBtc = Number(vout.value) * 1e8;
-          const outputHash = body.UtxoBased.vout[body.UtxoBased.vout.length - 1].scriptPubKey.asm
-            .replace(BTC_TEXT_WALLET_START, '')
-            .replace(BTC_TEXT_WALLET_END, '');
+        const valueBtc = Number(sendFundOut.value) * 1e8;
+        const outputHash = sendFundOut.asm.split(' ')[1];
 
-          console.log(Logs.Custom, `Hash btc script (2): ${outputHash}`);
-          walletBtc = btcOutputToAddress(outputHash);
+        log(`Hash btc script: ${outputHash}`);
+
+        const walletBtc = btcOutputToAddress(outputHash);
+
+        let data = decodeOpReturnOut(outs.map(({ asm }) => asm));
+
+        if (!data) {
+          data = decodeMultisigOut(outs.map(({ asm }) => asm));
         }
 
-        for (let i = 0; i < dataArray.length; i += 1) {
-          data = data + dataArray[i]?.scriptPubKey.asm.replace(BTC_TEXT, '');
+        if (!data) {
+          throw new Error('Incorrect event data');
         }
 
-        const returnData = {
+        const returnData: BtcEventData = {
           data,
           value: toHex(BigInt(Math.trunc(valueBtc))),
           wallet: walletBtc,
         };
 
-        log(Logs.Custom, 'Btc Tx data:');
-        log(Logs.Custom, returnData);
+        log('Btc Tx data: ', returnData);
 
         return returnData;
       }
@@ -197,8 +223,6 @@ export const parseBtcEventClaimBody = (body: unknown): L1EventData => {
   }
 
   const l1TxData = parseL1TxData(data.data) as L1TxDataForAccept | L1TxDataForTransfer;
-
-  log('l1TxData', l1TxData);
 
   return {
     recipient: data.wallet as HexBigInt,

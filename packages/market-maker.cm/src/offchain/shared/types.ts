@@ -23,7 +23,7 @@ export type OrderStateClaimBody = {
   collateral: HexBigInt;
   covering: HexBigInt;
   owner: User;
-  baseWallet: string;
+  baseRecipient: User;
   txId: string;
 };
 
@@ -35,7 +35,8 @@ export type RequestStateClaimBody = {
   requestedOrderId: string;
   quoteWallet: string;
   baseAmount: HexBigInt;
-  quoteAmount: HexBigInt;
+  requestedQuoteAmount: HexBigInt;
+  promisedQuoteAmount: HexBigInt;
   createdAt: number;
   expirationDate: number;
   executionStatus: REQUEST_EXECUTION_STATUS;
@@ -50,7 +51,7 @@ export type CwebWallet = string;
 
 export type DepositArguments = [depositAmount: HexBigInt];
 export type WithdrawArguments = [withdrawAmount: HexBigInt];
-export type CreateOrderArguments = [baseAmount: HexBigInt, l1Amount: HexBigInt, baseWallet: CwebWallet];
-export type ChangeOrderArguments = [baseAmount: HexBigInt, l1Amount: HexBigInt, baseWallet: CwebWallet];
+export type CreateOrderArguments = [baseAmount: HexBigInt, l1Amount: HexBigInt, baseRecipient: User];
+export type ChangeOrderArguments = [baseAmount: HexBigInt, l1Amount: HexBigInt, baseRecipient: User];
 export type CancelOrderArguments = [id: OrderId];
 export type ChangeContractOwnerArguments = [newOwner: User];

@@ -6,6 +6,8 @@ export enum Key {
   BEST_BY_QUOTE_INDEX = 'BEST_BY_QUOTE_INDEX',
   ACTIVE_INDEX = 'ACTIVE_INDEX',
   CLOSED_INDEX = 'CLOSED_INDEX',
+  ERROR_INDEX = 'ERROR_INDEX',
+  UNIQUENESS_CHECK = 'UNIQUENESS_CHECK',
   CONTRACT_OWNER = 'CONTRACT_OWNER',
 }
 
@@ -15,6 +17,7 @@ export enum ACTIVITY_STATUS {
   CANCELLING = 'CANCELLING',
   CANCELLED = 'CANCELLED',
   EXPIRED = 'EXPIRED',
+  ERROR = 'ERROR',
 }
 
 export enum PAYMENT_STATUS {
@@ -24,17 +27,36 @@ export enum PAYMENT_STATUS {
 }
 
 export enum PUBLIC_METHODS {
-  CREATE_POSITION = 'CREATE_POSITION',
-  CANCEL_POSITION = 'CANCEL_POSITION',
-  CHANGE_CONTRACT_OWNER = 'CHANGE_CONTRACT_OWNER',
+  CREATE_POSITION = '0x01',
+  CANCEL_POSITION = '0x02',
+  CHANGE_CONTRACT_OWNER = '0x03',
 }
 
 export const FEE = {
-  CREATE_POSITION: 100000n,
-  CANCEL_POSITION: 50000n,
+  CREATE_POSITION: 2000000n,
+  CANCEL_POSITION: 1000000n,
 };
 
 export enum CallType {
   Accept = 128,
   Transfer = 129,
 }
+
+export const BTC_MAIN_NET = {
+  bech32: 'bc',
+  pubKeyHash: 0x00,
+  scriptHash: 0x05,
+  wif: 0x80,
+};
+
+export const BTC_TEST_NET: typeof BTC_MAIN_NET = {
+  bech32: 'tb',
+  pubKeyHash: 0x6f,
+  scriptHash: 0xc4,
+  wif: 0xef,
+};
+
+export const BtcShardNetwork = {
+  btc: BTC_MAIN_NET,
+  tbtc: BTC_TEST_NET,
+};

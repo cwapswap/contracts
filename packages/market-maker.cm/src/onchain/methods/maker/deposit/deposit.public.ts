@@ -1,4 +1,4 @@
-import { Context, constructContinueTx, constructRead } from '@coinweb/contract-kit';
+import { Context, addContinuation, constructRead } from '@coinweb/contract-kit';
 
 import { DepositArguments, FEE, createMakerDepositKey } from '../../../../offchain/shared';
 import { PRIVATE_METHODS } from '../../../constants';
@@ -23,26 +23,22 @@ export const depositPublic = (context: Context) => {
 
   const transactionFee = 900n;
 
-  return [
-    constructContinueTx(
-      context,
-      [],
-      [
-        {
-          callInfo: {
-            ref: getContractRef(context),
-            methodInfo: {
-              methodName: PRIVATE_METHODS.DEPOSIT,
-              methodArgs: [depositAmount] satisfies DepositPrivateArguments,
-            },
-            contractInfo: {
-              providedCweb: availableCweb - transactionFee,
-              authenticated: authInfo,
-            },
-            contractArgs: [constructRead(issuer, createMakerDepositKey(getUser(context)))],
-          },
-        },
-      ],
-    ),
-  ];
+  const callInfo = {
+    ref: getContractRef(context),
+    methodInfo: {
+      methodName: PRIVATE_METHODS.DEPOSIT,
+      methodArgs: [depositAmount] satisfies DepositPrivateArguments,
+    },
+    contractInfo: {
+      providedCweb: availableCweb - transactionFee,
+      authenticated: authInfo,
+    },
+    contractArgs: [constructRead(issuer, createMakerDepositKey(getUser(context)))],
+  };
+
+  addContinuation(context, {
+    onSuccess: callInfo,
+  });
+
+  return [];
 };

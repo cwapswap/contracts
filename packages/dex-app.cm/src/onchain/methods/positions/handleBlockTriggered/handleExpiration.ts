@@ -1,4 +1,5 @@
 import {
+  ClaimKey,
   Context,
   ContractIssuer,
   constructContinueTx,
@@ -15,15 +16,19 @@ import {
   PositionStateClaimBody,
   createActivePositionIndexKey,
   createBestByQuoteActiveIndexKey,
+  createBtcUtxoUniquenessKey,
   createPositionFundsKey,
   toHex,
 } from '../../../../offchain/shared';
-import { TypedClaim } from '../../../types';
+import { L1Types, TypedClaim } from '../../../types';
 import {
   constructSendCweb,
   createClosedIndexClaim,
   createPositionStateClaim,
   createBestByQuoteIndex,
+  getInstanceParameters,
+  validateBtcChainData,
+  constructNonNullable,
 } from '../../../utils';
 
 export const handleExpiration = (
@@ -43,10 +48,23 @@ export const handleExpiration = (
     throw new Error('Cannot return funds');
   }
 
+  let uniquenessKey: null | ClaimKey;
+
+  if (getInstanceParameters().l1_type === L1Types.Btc) {
+    if (!validateBtcChainData(positionState.chainData)) {
+      throw new Error('Invalid input data');
+    }
+
+    uniquenessKey = createBtcUtxoUniquenessKey(positionState.chainData);
+  } else {
+    uniquenessKey = null;
+  }
+
   return [
     constructContinueTx(context, [
       passCwebFrom(issuer, availableCweb),
       constructTake(createPositionFundsKey(positionId)),
+      ...constructNonNullable(uniquenessKey, (uniquenessKey) => [constructTake(uniquenessKey)]),
       ...constructSendCweb(BigInt(positionStoredAmount), fundsOwner, null),
       constructStore(
         createPositionStateClaim({

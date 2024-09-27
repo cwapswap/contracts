@@ -1,18 +1,21 @@
 import {
   AuthInfo,
+  Claim,
   ClaimKey,
   Context,
   ContractIssuer,
-  FullCallInfo,
+  NewTx,
   NewTxContinue,
   NewTxJump,
   PreparedOperation,
+  addContinuation,
   constructBlock,
   constructContinueTx,
   constructContractRef,
   constructRead,
-  ecdsaContract,
-  passCwebFrom,
+  prepareQueueCall,
+  queueCostFee,
+  sendCwebInterface,
 } from '@coinweb/contract-kit';
 
 import {
@@ -40,95 +43,98 @@ export const createCreatePositionCallPrivate = (
   methodArgs: [
     positionNewId: string,
     positionState: PositionStateClaimBody,
-    signer: string | undefined,
     ownerFee: string,
+    uniqueness: null | Claim,
   ],
   providedCweb: bigint,
   authenticated: AuthInfo,
+  uniqueness: null | Claim,
 ) => {
-  const transactionFee = 1000n;
+  const transactionFee = 1100n;
 
-  return [
-    constructContinueTx(
-      context,
-      [passCwebFrom(issuer, providedCweb)],
-      [
-        {
-          callInfo: {
-            ref: constructContractRef(issuer, []),
-            methodInfo: {
-              methodName: PRIVATE_METHODS.CREATE_POSITION,
-              methodArgs,
-            },
-            contractInfo: {
-              providedCweb: providedCweb - transactionFee,
-              authenticated,
-            },
-            contractArgs: [
-              constructRead(issuer, createPositionStateKey(positionId)),
-              constructRead(issuer, createOwnerKey()),
-            ],
-          },
-        },
-      ],
-    ),
-  ];
-};
-
-export const createCallWithL1EventBlock = ({
-  authenticated,
-  eventClaimKey,
-  eventNonce,
-  issuer,
-  methodName,
-  positionId,
-  positionState,
-  providedCweb,
-  withExpiration,
-}: {
-  methodName: string;
-  issuer: ContractIssuer;
-  providedCweb: bigint;
-  authenticated: AuthInfo;
-  eventClaimKey: ClaimKey;
-  eventNonce: bigint | null;
-  positionId: string;
-  positionState: PositionStateClaimBody;
-  withExpiration: boolean;
-}) => {
-  return [
-    {
-      callInfo: {
-        ref: constructContractRef(issuer, []),
-        methodInfo: {
-          methodName,
-          methodArgs: [positionId, eventNonce === null ? eventNonce : toHex(eventNonce), positionState],
-        },
-        contractInfo: {
-          providedCweb,
-          authenticated,
-        },
-        contractArgs: [
-          constructRead(wrapWithJumpEventIssuer(), wrapWithJumpEventClaimKey(eventClaimKey, issuer)),
-          constructRead(issuer, createPositionFundsKey(positionId)),
-          constructRead(issuer, createPositionStateKey(positionId)),
-          constructRead(
-            CONSTANTS.BLOCK_HEIGHT_INFO_PROVIDER,
-            createExpirationPositionClaimKey(positionState.expirationDate),
-          ),
-          constructRead(issuer, createClosedIndexKey(positionId)),
-          constructBlock([
-            wrapWithJumpEventBlockFilter(createL1AcceptEventBlockFilter(eventClaimKey), issuer),
-            createClosedPositionBlockFilter(issuer, positionId),
-            ...(withExpiration ? [createExpirationPositionBlockFilter(positionState.expirationDate)] : []),
-          ]),
-        ],
+  addContinuation(context, {
+    onSuccess: {
+      ref: constructContractRef(issuer, []),
+      methodInfo: {
+        methodName: PRIVATE_METHODS.CREATE_POSITION,
+        methodArgs,
       },
+      contractInfo: {
+        providedCweb: providedCweb - transactionFee,
+        authenticated,
+      },
+      contractArgs: [
+        constructRead(issuer, createPositionStateKey(positionId)),
+        constructRead(issuer, createOwnerKey()),
+        ...constructNonNullable(uniqueness, (uniqueness) => [constructRead(issuer, uniqueness.key)]),
+      ],
     },
-  ] satisfies [FullCallInfo];
+  });
+
+  return [];
 };
 
-export const { constructSendCweb } = ecdsaContract();
+export const createCallWithL1EventBlock = (
+  context: Context,
+  {
+    authenticated,
+    eventClaimKey,
+    eventNonce,
+    issuer,
+    methodName,
+    positionId,
+    positionState,
+    providedCweb,
+    withExpiration,
+  }: {
+    methodName: string;
+    issuer: ContractIssuer;
+    providedCweb: bigint;
+    authenticated: AuthInfo;
+    eventClaimKey: ClaimKey;
+    eventNonce: bigint | null;
+    positionId: string;
+    positionState: PositionStateClaimBody;
+    withExpiration: boolean;
+  },
+): NewTx => {
+  return constructContinueTx(
+    context,
+    [
+      constructBlock([
+        wrapWithJumpEventBlockFilter(createL1AcceptEventBlockFilter(eventClaimKey), issuer),
+        createClosedPositionBlockFilter(issuer, positionId),
+        ...(withExpiration ? [createExpirationPositionBlockFilter(positionState.expirationDate)] : []),
+      ]),
+    ],
+    [
+      {
+        callInfo: prepareQueueCall(issuer, {
+          methodInfo: {
+            methodName,
+            methodArgs: [positionId, eventNonce === null ? eventNonce : toHex(eventNonce), positionState],
+          },
+          contractInfo: {
+            providedCweb: providedCweb - queueCostFee(),
+            authenticated,
+          },
+          contractArgs: [
+            constructRead(wrapWithJumpEventIssuer(), wrapWithJumpEventClaimKey(eventClaimKey, issuer)),
+            constructRead(issuer, createPositionFundsKey(positionId)),
+            constructRead(issuer, createPositionStateKey(positionId)),
+            constructRead(
+              CONSTANTS.BLOCK_HEIGHT_INFO_PROVIDER,
+              createExpirationPositionClaimKey(positionState.expirationDate),
+            ),
+            constructRead(issuer, createClosedIndexKey(positionId)),
+          ],
+        }),
+      },
+    ],
+  );
+};
+
+export const { constructSendCweb } = sendCwebInterface();
 
 type ConditionalInput = PreparedOperation[] | PreparedOperation | NewTxContinue | NewTxJump;
 
@@ -165,3 +171,14 @@ export const constructConditional = ((condition, ops, altOps = [] as unknown) =>
 
   return [ops];
 }) as ConstructConditional;
+
+export const constructNonNullable = <TValue>(
+  value: TValue,
+  callback: (value: NonNullable<TValue>) => PreparedOperation[],
+) => {
+  if (value === null || value === undefined) {
+    return [];
+  }
+
+  return callback(value);
+};

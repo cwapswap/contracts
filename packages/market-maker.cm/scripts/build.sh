@@ -32,7 +32,6 @@ mkdir -p $ROOT/{cweb_dist/{on,off}chain,dist/tmp/{step{1,2,3},final}}
 	--format=esm \
   --external:std \
   --tree-shaking=true \
-  --minify \
 	dist/tmp/step3/onchain.js \
 	--outfile=dist/tmp/final/onchain.js
 

@@ -1,11 +1,4 @@
-import {
-  Context,
-  constructContinueTx,
-  constructStore,
-  constructTake,
-  passCwebFrom,
-  selfCallWrapper,
-} from '@coinweb/contract-kit';
+import { Context, constructContinueTx, constructStore, constructTake, passCwebFrom } from '@coinweb/contract-kit';
 
 import { MakerDepositClaimBody, createMakerDepositKey } from '../../../../offchain/shared';
 import { TypedClaim } from '../../../types';
@@ -21,7 +14,7 @@ import {
 
 import { DepositPrivateArguments } from './types';
 
-export const deposit = selfCallWrapper((context: Context) => {
+export const deposit = (context: Context) => {
   const { availableCweb } = getCallParameters(context);
 
   const [depositAmount] = getMethodArguments<DepositPrivateArguments>(context);
@@ -40,4 +33,4 @@ export const deposit = selfCallWrapper((context: Context) => {
       constructStore(createMakerDepositClaim({ user, amount: totalDeposit })),
     ]),
   ];
-});
+};

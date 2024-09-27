@@ -1,4 +1,4 @@
-import type { ClaimKey, Context } from '@coinweb/contract-kit';
+import type { Claim, ClaimKey, Context } from '@coinweb/contract-kit';
 import {
   getContractId,
   constructContinueTx,
@@ -9,15 +9,21 @@ import {
   extractRead,
   passCwebFrom,
   constructStore,
-  selfCallWrapper,
   constructClaimKey,
 } from '@coinweb/contract-kit';
 
-import { PositionStateClaimBody } from '../../../../offchain/shared';
+import {
+  ACTIVITY_STATUS,
+  PAYMENT_STATUS,
+  PositionStateClaimBody,
+  toHex,
+  UniquenessClaimBody,
+} from '../../../../offchain/shared';
 import { PRIVATE_METHODS } from '../../../constants';
 import { L1Types, OwnerClaimBody } from '../../../types';
 import {
   constructConditional,
+  getUser,
   constructSendCweb,
   createActiveIndexClaim,
   createBestByQuoteIndexClaim,
@@ -33,9 +39,11 @@ import {
   getInstanceParameters,
   validateBtcChainData,
   createEvmEventClaimKey,
+  createErrorByDateIndexClaim,
+  constructNonNullable,
 } from '../../../utils';
 
-export const createPosition = selfCallWrapper((context: Context) => {
+export const createPosition = (context: Context) => {
   const { tx } = context;
   const { providedCweb: availableCweb, authenticated: auth } = extractContractInfo(tx);
 
@@ -45,13 +53,15 @@ export const createPosition = selfCallWrapper((context: Context) => {
 
   const issuer = constructContractIssuer(getContractId(tx));
 
-  const [, positionId, positionState, signer, ownerFee] = getMethodArguments(context) as [
+  const [, positionId, positionState, ownerFee, uniqueness] = getMethodArguments(context) as [
     unknown,
     string,
     PositionStateClaimBody,
-    string | undefined,
     string,
+    null | Claim,
   ];
+
+  const signer = getUser(context);
 
   const contractArgs = extractContractArgs(tx);
 
@@ -66,10 +76,59 @@ export const createPosition = selfCallWrapper((context: Context) => {
       context,
       issuer,
       positionNewId,
-      [positionNewId, positionState, signer, ownerFee],
+      [positionNewId, positionState, ownerFee, uniqueness],
       availableCweb - transactionFee,
       auth,
+      uniqueness,
     );
+  }
+
+  const existingUniqueness = extractRead(contractArgs[2])?.[0]?.content;
+
+  const baseAmount = BigInt(positionState.baseAmount);
+  const quoteAmount = BigInt(positionState.quoteAmount);
+
+  if (existingUniqueness) {
+    return [
+      constructContinueTx(context, [
+        passCwebFrom(issuer, availableCweb),
+        ...constructSendCweb(BigInt(baseAmount), signer, null),
+        constructStore(
+          createPositionStateClaim({
+            id: positionId,
+            body: {
+              ...positionState,
+              activityStatus: ACTIVITY_STATUS.ERROR,
+              paymentStatus: PAYMENT_STATUS.NOT_PAYABLE,
+              funds: toHex(0),
+              error: (existingUniqueness.body as UniquenessClaimBody).message,
+            },
+          }),
+        ),
+        constructStore(
+          createErrorByDateIndexClaim({
+            timestamp: positionState.createdAt,
+            positionId,
+          }),
+        ),
+        constructStore(
+          createDateIndexClaim({
+            timestamp: positionState.createdAt,
+            positionId,
+          }),
+        ),
+        ...constructConditional(
+          signer.auth === 'EcdsaContract',
+          constructStore(
+            createUserIndexClaim({
+              user: signer,
+              timestamp: positionState.createdAt,
+              positionId,
+            }),
+          ),
+        ),
+      ]),
+    ];
   }
 
   const contractOwnerClaim = extractRead(contractArgs[1])?.[0]?.content;
@@ -92,10 +151,8 @@ export const createPosition = selfCallWrapper((context: Context) => {
     eventClaimKey = createEvmEventClaimKey(positionId, eventNonce);
   }
 
-  const baseAmount = BigInt(positionState.baseAmount);
-  const quoteAmount = BigInt(positionState.quoteAmount);
   const jumpContractFee = 2000n;
-  const firstTransactionFee = 2700n + baseAmount + BigInt(ownerFee) + jumpContractFee;
+  const firstTransactionFee = 2800n + baseAmount + BigInt(ownerFee) + jumpContractFee;
 
   const secondTransactionFee = 1200n;
 
@@ -119,6 +176,7 @@ export const createPosition = selfCallWrapper((context: Context) => {
             amount: baseAmount,
           }),
         ),
+        ...constructNonNullable(uniqueness, (uniqueness) => [constructStore(uniqueness)]),
         constructStore(
           createActiveIndexClaim({
             timestamp: positionState.createdAt,
@@ -146,10 +204,10 @@ export const createPosition = selfCallWrapper((context: Context) => {
           }),
         ),
         ...constructConditional(
-          !!signer,
+          signer.auth === 'EcdsaContract',
           constructStore(
             createUserIndexClaim({
-              pubKey: signer!,
+              user: signer,
               timestamp: positionState.createdAt,
               positionId,
             }),
@@ -159,20 +217,16 @@ export const createPosition = selfCallWrapper((context: Context) => {
       ],
       constructJumpCall(eventClaimKey, jumpContractFee),
     ),
-    constructContinueTx(
-      context,
-      [],
-      createCallWithL1EventBlock({
-        methodName: PRIVATE_METHODS.HANDLE_BLOCK_TRIGGERED,
-        issuer,
-        providedCweb: availableCweb - secondTransactionFee - firstTransactionFee,
-        authenticated: auth,
-        eventNonce,
-        positionId,
-        positionState,
-        withExpiration: !!signer,
-        eventClaimKey,
-      }),
-    ),
+    createCallWithL1EventBlock(context, {
+      methodName: PRIVATE_METHODS.HANDLE_BLOCK_TRIGGERED,
+      issuer,
+      providedCweb: availableCweb - secondTransactionFee - firstTransactionFee,
+      authenticated: auth,
+      eventNonce,
+      positionId,
+      positionState,
+      withExpiration: signer.auth === 'EcdsaContract',
+      eventClaimKey,
+    }),
   ];
-});
+};

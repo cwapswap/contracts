@@ -1,5 +1,5 @@
 develop:
-  mnemonic: ${PRODUCTION_MNEMONIC}
+  mnemonic: sea total mirror fat opera swear fox history such assist picture snack
   shardToWrite: ELROND
   shardToExecute: BNB
   endpoint: https://coinweb-experimental-bitcoin-graphql-green.coinz.team/wallet
@@ -11,6 +11,26 @@ develop:
     - decompressor_v2
     - data_hasher
 
+  replicateConfig: &prod_replicate
+    replicator: replicant.cm v0.0.2
+    replicas: 
+    - shard: eth
+      interpreters: 
+      - data_hasher
+      - data_hasher_v2
+      - std_js_contract_v0
+      templates:
+      - jump-listener.cm v0.0.4
+      instances: []
+    - shard: btc
+      interpreters: 
+      - data_hasher
+      - data_hasher_v2
+      - std_js_contract_v0
+      templates:
+      - jump-listener.cm v0.0.4
+      instances: []
+
   unsafe: true
 
   gitRemoteLockIndexRepo: git@gitlab.com:coinweb/cweb-dapp-index.git
@@ -21,7 +41,7 @@ develop:
   packageRegistry: 'https://npm.coinweb.io'
 
 production:
-  mnemonic: ${PRODUCTION_MNEMONIC}
+  mnemonic: sea total mirror fat opera swear fox history such assist picture snack
   shardToWrite: ELROND
   shardToExecute: BNB
   endpoint: https://api-cloud.coinweb.io/wallet
@@ -33,6 +53,8 @@ production:
     - decompressor_v2
     - data_hasher
 
+  replicateConfig: *prod_replicate
+
   unsafe: true
 
   gitRemoteLockIndexRepo: git@gitlab.com:coinweb/cweb-dapp-index.git
@@ -42,11 +64,11 @@ production:
   pathToFilteredActionFile: .actions-prod.yaml
   packageRegistry: 'https://npm.coinweb.io'
 
-devnet_blue:
+devnet:
   mnemonic: priority supply couple broccoli balcony sort flag keep original wrong pottery version
   shardToWrite: DEVNET_L1A
   shardToExecute: DEVNET_L1A
-  endpoint: https://api-devnet.coinweb.io/wallet
+  endpoint: https://coinweb-experimental-bitcoin-graphql-devblue.coinhq.store/wallet
 
   bootstrapConfig:
     dataHasher: data_hasher_v2
@@ -55,13 +77,33 @@ devnet_blue:
     - decompressor_v2
     - data_hasher
 
+  replicateConfig: &dev_replicate
+    replicator: replicant.cm v0.0.2
+    replicas: 
+    - shard: devb
+      interpreters: 
+      - data_hasher
+      - data_hasher_v2
+      - std_js_contract_v0
+      templates:
+      - jump-listener.cm v0.0.4
+      instances: []
+    - shard: tbtc
+      interpreters: 
+      - data_hasher
+      - data_hasher_v2
+      - std_js_contract_v0
+      templates:
+      - jump-listener.cm v0.0.4
+      instances: []
+
   unsafe: true
 
-  gitRemoteLockIndexRepo: git@gitlab.com:coinweb/cweb-dapp-index.git
-  pathToIndexFile: .cweb-config/dapp-ecosystem-devnet-blue.yaml
-  pathToLockIndexFile: .dapp-ecosystem-lock-devnet-blue.yaml
-  pathToRawActionFile: ./.unfiltered-actions-devnet-blue.yaml
-  pathToFilteredActionFile: .actions-devnet-blue.yaml
+  # gitRemoteLockIndexRepo: git@gitlab.com:coinweb/cweb-dapp-index.git
+  pathToIndexFile: .cweb-config/dapp-ecosystem-devnet.yaml
+  pathToLockIndexFile: .dapp-ecosystem-lock-devnet.yaml
+  pathToRawActionFile: ./.unfiltered-actions-devnet.yaml
+  pathToFilteredActionFile: .actions-devnet.yaml
   packageRegistry: 'https://npm.coinweb.io'
 
 prod_demo:
@@ -77,6 +119,8 @@ prod_demo:
     - decompressor_v2
     - data_hasher
 
+  replicateConfig: *dev_replicate
+
   unsafe: true
 
   gitRemoteLockIndexRepo: git@gitlab.com:coinweb/cweb-dapp-index.git
@@ -84,4 +128,28 @@ prod_demo:
   pathToLockIndexFile: .dapp-ecosystem-lock-prod-demo.yaml
   pathToRawActionFile: ./.unfiltered-actions-prod-demo.yaml
   pathToFilteredActionFile: .actions-prod-demo.yaml
+  packageRegistry: 'https://npm.coinweb.io'
+
+tests:
+  mnemonic: priority supply couple broccoli balcony sort flag keep original wrong pottery version
+  shardToWrite: DEVNET_L1A
+  shardToExecute: DEVNET_L1A
+  endpoint: https://api-devblue.coinhq.store/wallet
+
+  bootstrapConfig:
+    dataHasher: data_hasher_v2
+    controller: controller_v2
+    dependencies:
+    - decompressor_v2
+    - data_hasher
+
+  replicateConfig: *dev_replicate
+
+  unsafe: true
+
+  gitRemoteLockIndexRepo: git@gitlab.com:coinweb/cweb-dapp-index.git
+  pathToIndexFile: .cweb-config/dapp-ecosystem-devnet-blue.yaml
+  pathToLockIndexFile: .dapp-ecosystem-lock-tests.yaml
+  pathToRawActionFile: ./.unfiltered-actions-tests.yaml
+  pathToFilteredActionFile: .actions-tests.yaml
   packageRegistry: 'https://npm.coinweb.io'
